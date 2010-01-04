@@ -1042,7 +1042,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 
     private static long getInteger(String v)
     {
-        Matcher m = INTEGERPATTERN.matcher(v);
+        Matcher m = INTEGERPATTERN.matcher(v.trim());
         if (m.find()) {
             String n = m.group(0);
             return Long.parseLong(n);
@@ -1052,7 +1052,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 
     private static double getDouble(String v)
     {
-        Matcher m = FLOATPATTERN.matcher(v);
+        Matcher m = FLOATPATTERN.matcher(v.trim());
         if (m.find()) {
             String n = m.group(0);
 	    if (n.length() > 0)
