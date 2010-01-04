@@ -967,8 +967,20 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	Collections.sort(list, new SortComparator(asc, alpha));
 	
 	List<String> sorted = new ArrayList<String>(end-start);
-	for (ScoreObject so : list.subList(start, end))
-		sorted.add(so.value);
+	for (ScoreObject so : list.subList(start, end)) {
+	    String value = so.value;
+
+	    if (pattern_get != null) {
+		String getkey = pattern_get.replace("*", value);
+		v = repository.get(getkey);
+		if (v instanceof String)
+		   value = (String) v;
+                else
+		   value = "";
+	    }
+
+	    sorted.add(value);
+        }
         
 	if (result != null) {
 		checkExpiry(result, true);
