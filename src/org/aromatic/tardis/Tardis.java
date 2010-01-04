@@ -845,7 +845,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
         return set.remove(member);
     }
 
-    public synchronized List<String> zrange(String key, int start, int end, boolean reverse)
+    public synchronized List<String> zrange(String key, int start, int end, boolean reverse, boolean withscores)
     {
 	checkExpiry(key);
         ZSet set = getZSet(key, false);
@@ -872,7 +872,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
         if (end >= size)
             end = size-1;
 
-	return set.range(start, end, reverse);
+	return set.range(start, end, reverse, withscores);
     }
 
     public synchronized List<String> zrangebyscore(String key, String min, String max, int offset, int end)
@@ -920,7 +920,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
     // SORT
     //
 
-    public synchronized List<String> sort(String key, boolean asc, boolean alpha, int start, int count, String pattern_by, String pattern_get)
+    public synchronized List<String> sort(String key, boolean asc, boolean alpha, int start, int count, String pattern_by, String pattern_get, String result)
     {
 	checkExpiry(key);
         Object v = repository.get(key);
@@ -970,6 +970,11 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	for (ScoreObject so : list.subList(start, end))
 		sorted.add(so.value);
         
+	if (result != null) {
+		checkExpiry(result, true);
+        	repository.put(result, (Object)sorted);
+	}
+
 	return sorted;
     }
 
@@ -1209,7 +1214,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	    return false;
 	}
 
-	public synchronized List<String> range(int start, int end, boolean reverse) {
+	public synchronized List<String> range(int start, int end, boolean reverse, boolean withscores) {
 	    ArrayList<String> list = new ArrayList<String>();
 	    Iterator<ScoreObject> iter = reverse
 		? scores.descendingIterator() : scores.iterator();
@@ -1220,6 +1225,9 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 		    continue;
 
 		list.add(so.value);
+
+		if (withscores)
+		    list.add(so.score);
 	    }
 
 	    return list;

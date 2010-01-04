@@ -104,8 +104,8 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("ZADD",        3);
 	commands.put("ZINCRBY",     3);
 	commands.put("ZREM",        2);
-	commands.put("ZRANGE",      3);
-	commands.put("ZREVRANGE",   3);
+	commands.put("ZRANGE",      VARIABLE);
+	commands.put("ZREVRANGE",   VARIABLE);
 	commands.put("ZREMRANGEBYSCORE", 3);
 	commands.put("ZRANGEBYSCORE",    VARIABLE);
 	commands.put("ZCARD",       1);
@@ -788,26 +788,39 @@ public class SocketServer implements IConnectionScoped,
 	    }
 
 	    else if (cmd.equals("ZRANGE")) {
-		String key = args[0];
-		int start = parseInteger(args[1]);
-		int end = parseInteger(args[2]);
-
 		try {
-		    List<String> values = tardis.zrange(key, start, end, false);
+		    String key = args[0];
+		    int start = parseInteger(args[1]);
+		    int end = parseInteger(args[2]);
+		    boolean withscores = (args.length > 3 
+			&& args[3].equalsIgnoreCase("WITHSCORES"));
+
+		    List<String> values = tardis.zrange(
+			key, start, end, false, withscores);
+
 		    printList(nbc, values);
+		} catch(ArrayIndexOutOfBoundsException e) {
+		    printError(nbc, "wrong number of arguments for '" 
+		        + args[0].toLowerCase() + "' command");
 		} catch(Exception e) {
 		    printError(nbc, e.getMessage());
 		}
 	    }
 
 	    else if (cmd.equals("ZREVRANGE")) {
-		String key = args[0];
-		int start = parseInteger(args[1]);
-		int end = parseInteger(args[2]);
-
 		try {
-		    List<String> values = tardis.zrange(key, start, end, true);
+		    String key = args[0];
+		    int start = parseInteger(args[1]);
+		    int end = parseInteger(args[2]);
+		    boolean withscores = (args.length > 3 
+			&& args[3].equalsIgnoreCase("WITHSCORES"));
+
+		    List<String> values = tardis.zrange(
+			key, start, end, true, withscores);
 		    printList(nbc, values);
+		} catch(ArrayIndexOutOfBoundsException e) {
+		    printError(nbc, "wrong number of arguments for '" 
+		        + args[0].toLowerCase() + "' command");
 		} catch(Exception e) {
 		    printError(nbc, e.getMessage());
 		}
@@ -888,6 +901,7 @@ public class SocketServer implements IConnectionScoped,
 		String pattern_get = null;
 		int start = 0;
 		int count = Integer.MAX_VALUE;
+		String store = null;
 
 		try {
 		    for (int i=0; i < args.length; i++) {
@@ -905,6 +919,8 @@ public class SocketServer implements IConnectionScoped,
 			    pattern_by = args[++i];
 			else if ("GET".equalsIgnoreCase(arg))
 			    pattern_get = args[++i];
+			else if ("STORE".equalsIgnoreCase(arg))
+                            store = args[++i];
 			else if ("LIMIT".equalsIgnoreCase(arg)) {
 			    start = parseInteger(args[++i]);
 			    count = parseInteger(args[++i]);
@@ -912,7 +928,7 @@ public class SocketServer implements IConnectionScoped,
         	            throw new UnsupportedOperationException(Tardis.SYNTAX);
 		    }
 
-		    List<String> values = tardis.sort(key, asc, alpha, start, count, pattern_by, pattern_get);
+		    List<String> values = tardis.sort(key, asc, alpha, start, count, pattern_by, pattern_get, store);
 		    printList(nbc, values);
 		} catch(ArrayIndexOutOfBoundsException e) {
 		    printError(nbc, Tardis.SYNTAX);
