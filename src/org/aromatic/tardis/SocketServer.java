@@ -42,93 +42,93 @@ public class SocketServer implements IConnectionScoped,
 		DEBUG = true;
 
 	commands.put("",	    0);
-    	commands.put("PING",        0);
-    	commands.put("QUIT",        0);
-    	commands.put("SHUTDOWN",    0);
-	commands.put("SAVE",        0);
-	commands.put("BGSAVE",      0);
-	commands.put("BGREWRITEAOF",0);
-	commands.put("LASTSAVE",    0);
+    	commands.put("ping",        0);
+    	commands.put("quit",        0);
+    	commands.put("shutdown",    0);
+	commands.put("save",        0);
+	commands.put("bgsave",      0);
+	commands.put("bgrewriteaof",0);
+	commands.put("lastsave",    0);
 
-    	commands.put("SET",         2);
-    	commands.put("GET",         1);
-    	commands.put("GETSET",      2);
-    	commands.put("MGET",        VARIABLE);
-    	commands.put("SETNX",       2);
-    	commands.put("MSET",        VARIABLE);
-    	commands.put("MSETNX",      VARIABLE);
-    	commands.put("INCR",        1);
-    	commands.put("INCRBY",      2);
-    	commands.put("DECR",        1);
-    	commands.put("DECRBY",      2);
-    	commands.put("EXISTS",      1);
-    	commands.put("DEL",         VARIABLE);
-    	commands.put("TYPE",        1);
+    	commands.put("set",         2);
+    	commands.put("get",         1);
+    	commands.put("getset",      2);
+    	commands.put("mget",        VARIABLE);
+    	commands.put("setnx",       2);
+    	commands.put("mset",        VARIABLE);
+    	commands.put("msetnx",      VARIABLE);
+    	commands.put("incr",        1);
+    	commands.put("incrby",      2);
+    	commands.put("decr",        1);
+    	commands.put("decrby",      2);
+    	commands.put("exists",      1);
+    	commands.put("del",         VARIABLE);
+    	commands.put("type",        1);
 
-    	commands.put("KEYS",        1);
-    	commands.put("RANDOMKEY",   0);
-    	commands.put("RENAME",      2);
-    	commands.put("RENAMENX",    2);
-    	commands.put("DBSIZE",      0);
-    	commands.put("EXPIRE",      2);
-    	commands.put("EXPIREAT",    2);
-    	commands.put("TTL",         1);
+    	commands.put("keys",        1);
+    	commands.put("randomkey",   0);
+    	commands.put("rename",      2);
+    	commands.put("renamenx",    2);
+    	commands.put("dbsize",      0);
+    	commands.put("expire",      2);
+    	commands.put("expireat",    2);
+    	commands.put("ttl",         1);
 
-	commands.put("RPUSH",       2);
-	commands.put("LPUSH",       2);
-	commands.put("LLEN",        1);
-	commands.put("LRANGE",      3);
-	commands.put("LTRIM",       3);
-	commands.put("LINDEX",      2);
-	commands.put("LSET",        3);
-	commands.put("LREM",        3);
-	commands.put("LPOP",        1);
-	commands.put("RPOP",        1);
-	commands.put("RPOPLPUSH",   2);
+	commands.put("rpush",       2);
+	commands.put("lpush",       2);
+	commands.put("llen",        1);
+	commands.put("lrange",      3);
+	commands.put("ltrim",       3);
+	commands.put("lindex",      2);
+	commands.put("lset",        3);
+	commands.put("lrem",        3);
+	commands.put("lpop",        1);
+	commands.put("rpop",        1);
+	commands.put("rpoplpush",   2);
 
-	commands.put("SADD",        2);
-	commands.put("SREM",        2);
-	commands.put("SPOP",        1);
-	commands.put("SMOVE",       3);
-        commands.put("SCARD",       1);
-	commands.put("SISMEMBER",   2);
-	commands.put("SMEMBERS",    1);
-	commands.put("SRANDMEMBER", 1);
-	commands.put("SINTER",      VARIABLE);
-	commands.put("SINTERSTORE", VARIABLE);
-	commands.put("SUNION",      VARIABLE);
-	commands.put("SUNIONSTORE", VARIABLE);
-	commands.put("SDIFF",       VARIABLE);
-	commands.put("SDIFFSTORE",  VARIABLE);
+	commands.put("sadd",        2);
+	commands.put("srem",        2);
+	commands.put("spop",        1);
+	commands.put("smove",       3);
+        commands.put("scard",       1);
+	commands.put("sismember",   2);
+	commands.put("smembers",    1);
+	commands.put("srandmember", 1);
+	commands.put("sinter",      VARIABLE);
+	commands.put("sinterstore", VARIABLE);
+	commands.put("sunion",      VARIABLE);
+	commands.put("sunionstore", VARIABLE);
+	commands.put("sdiff",       VARIABLE);
+	commands.put("sdiffstore",  VARIABLE);
 
-	commands.put("ZADD",        3);
-	commands.put("ZINCRBY",     3);
-	commands.put("ZREM",        2);
-	commands.put("ZRANGE",      VARIABLE);
-	commands.put("ZREVRANGE",   VARIABLE);
-	commands.put("ZREMRANGEBYSCORE", 3);
-	commands.put("ZRANGEBYSCORE",    VARIABLE);
-	commands.put("ZCARD",       1);
-	commands.put("ZSCORE",      2);
+	commands.put("zadd",        3);
+	commands.put("zincrby",     3);
+	commands.put("zrem",        2);
+	commands.put("zrange",      VARIABLE);
+	commands.put("zrevrange",   VARIABLE);
+	commands.put("zremrangebyscore", 3);
+	commands.put("zrangebyscore",    VARIABLE);
+	commands.put("zcard",       1);
+	commands.put("zscore",      2);
 
-	commands.put("SORT",        VARIABLE);
+	commands.put("sort",        VARIABLE);
 
-	commands.put("SELECT",      1);
-	commands.put("MOVE",        2);
-	commands.put("FLUSHDB",     0);
-	commands.put("FLUSHALL",    0);
+	commands.put("select",      1);
+	commands.put("move",        2);
+	commands.put("flushdb",     0);
+	commands.put("flushall",    0);
 
-	commands.put("INFO",        0);
-	commands.put("DEBUG",       1);
+	commands.put("info",        0);
+	commands.put("debug",       1);
 
-	    if (tardisFile.exists()) {
-		System.out.println("loading data from " + tardisFile);
-		try {
-		    Tardis.load(tardisFile);
-		} catch(Exception e) {
-            	    System.out.println(e);
-		}
+	if (tardisFile.exists()) {
+	    System.out.println("loading data from " + tardisFile);
+	    try {
+		Tardis.load(tardisFile);
+	    } catch(Exception e) {
+		System.out.println(e);
 	    }
+	}
 
         try {
             srv = new Server(6379, new SocketServer());
@@ -190,12 +190,12 @@ public class SocketServer implements IConnectionScoped,
 	    if (data.startsWith("*")) {
 		List<String> list = parseList(nbc, data);
 		if (list !=  null) {
-		    cmd = list.remove(0).toUpperCase();
+		    cmd = list.remove(0).toLowerCase();
 		    args = list.toArray(new String[0]);
 		}
 	    } else {
 	        args = data.trim().split(" ", 2);
-	        cmd = args[0].toUpperCase();
+	        cmd = args[0].toLowerCase();
 
 	        if (args.length > 1)
 	    	    args = args[1].split(" ");
@@ -219,28 +219,28 @@ public class SocketServer implements IConnectionScoped,
 		}
 
 		printError(nbc, "wrong number of arguments for '" 
-		    + cmd.toLowerCase() + "' command");
+		    + cmd + "' command");
 	    }
 
 	    else if (cmd.equals("")) {
 		//printEmpty(nbc);
 	    }
 
-	    else if (cmd.equals("PING"))
+	    else if (cmd.equals("ping"))
 		printStatus(nbc, "PONG");
 
-	    else if (cmd.equals("SHUTDOWN"))
+	    else if (cmd.equals("shutdown"))
 		shutdownServer();
 
-	    else if (cmd.equals("SAVE") 
-		|| cmd.equals("BGSAVE")
-		|| cmd.equals("BGREWRITEAOF")) {
+	    else if (cmd.equals("save") 
+		|| cmd.equals("bgsave")
+		|| cmd.equals("bgrewriteaof")) {
 		try {
 		    Tardis.save(tardisFile);
 
-		    if (cmd.equals("BGSAVE"))
+		    if (cmd.equals("bgsave"))
 			printStatus(nbc, "Background saving started");
-		    else if (cmd.equals("BGREWRITEAOF"))
+		    else if (cmd.equals("bgrewriteaof"))
 			printStatus(nbc, "Background append only file rewriting started");
 		    else
 			printStatus(nbc);
@@ -250,18 +250,18 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LASTSAVE")) {
+	    else if (cmd.equals("lastsave")) {
 		printInteger(nbc, tardisFile.lastModified());
 	    }
 
-	    else if (cmd.equals("QUIT"))
+	    else if (cmd.equals("quit"))
 		nbc.close();
 
 	    //
 	    // STRING COMMANDS
 	    //
 
-	    else if (cmd.equals("SET")) {
+	    else if (cmd.equals("set")) {
 		String key = args[0];
 		String value = parseString(nbc, args[1]);
 
@@ -269,7 +269,7 @@ public class SocketServer implements IConnectionScoped,
 		printStatus(nbc);
 	    }
 
-	    else if (cmd.equals("GET")) {
+	    else if (cmd.equals("get")) {
 		String key = args[0];
 
 		try {
@@ -280,7 +280,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("GETSET")) {
+	    else if (cmd.equals("getset")) {
 		String key = args[0];
 	        String value = parseString(nbc, args[1]);
 
@@ -292,12 +292,12 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("MGET")) {
+	    else if (cmd.equals("mget")) {
 		List<String> values = tardis.mget(args);
 		printList(nbc, values);
 	    }
 
-	    else if (cmd.equals("SETNX")) {
+	    else if (cmd.equals("setnx")) {
 		String key = args[0];
 	        String value = parseString(nbc, args[1]);
 
@@ -305,7 +305,7 @@ public class SocketServer implements IConnectionScoped,
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("MSET")) {
+	    else if (cmd.equals("mset")) {
 		if (args.length % 2 != 0)
 			printError(nbc, "wrong number of arguments");
 		else {
@@ -314,7 +314,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("MSETNX")) {
+	    else if (cmd.equals("msetnx")) {
 		if (args.length % 2 != 0)
 			printError(nbc, "wrong number of arguments");
 		else {
@@ -323,7 +323,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("INCR")) {
+	    else if (cmd.equals("incr")) {
 		String key = args[0];
 
 		try {
@@ -334,7 +334,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("INCRBY")) {
+	    else if (cmd.equals("incrby")) {
 		String key = args[0];
 		long step = parseLong(args[1]);
 
@@ -346,7 +346,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("DECR")) {
+	    else if (cmd.equals("decr")) {
 		String key = args[0];
 
 		try {
@@ -357,7 +357,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("DECRBY")) {
+	    else if (cmd.equals("decrby")) {
 		String key = args[0];
 		long step = parseLong(args[1]);
 
@@ -369,19 +369,19 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("EXISTS")) {
+	    else if (cmd.equals("exists")) {
 		String key = args[0];
 
 		boolean result = tardis.exists(key);
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("DEL")) {
+	    else if (cmd.equals("del")) {
 		int result = tardis.del(args);
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("TYPE")) {
+	    else if (cmd.equals("type")) {
 		String key = args[0];
 
 		String result = tardis.type(key);
@@ -392,19 +392,19 @@ public class SocketServer implements IConnectionScoped,
 	    // KEY SPACE COMMANDS
 	    //
 
-	    else if (cmd.equals("KEYS")) {
+	    else if (cmd.equals("keys")) {
 		String pattern = args[0];
 
 		String result = tardis.keys(pattern);
 		printResult(nbc, result);
 	    }
 
-	    else if (cmd.equals("RANDOMKEY")) {
+	    else if (cmd.equals("randomkey")) {
 		String result = tardis.randomkey();
 		printResult(nbc, result);
 	    }
 
-	    else if (cmd.equals("RENAME")) {
+	    else if (cmd.equals("rename")) {
 		String oldname = args[0];
 		String newname = args[1];
 
@@ -416,7 +416,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("RENAMENX")) {
+	    else if (cmd.equals("renamenx")) {
 		String oldname = args[0];
 		String newname = args[1];
 
@@ -428,12 +428,12 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("DBSIZE")) {
+	    else if (cmd.equals("dbsize")) {
 		long result = tardis.dbsize();
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("EXPIRE")) {
+	    else if (cmd.equals("expire")) {
 		String key = args[0];
 		long time = parseLong(args[1]) * 1000;
 
@@ -441,7 +441,7 @@ public class SocketServer implements IConnectionScoped,
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("EXPIREAT")) {
+	    else if (cmd.equals("expireat")) {
 		String key = args[0];
 		long time = parseLong(args[1]) * 1000;
 
@@ -449,7 +449,7 @@ public class SocketServer implements IConnectionScoped,
 		printInteger(nbc, result);
 	    }
 
-	    else if (cmd.equals("TTL")) {
+	    else if (cmd.equals("ttl")) {
 		String key = args[0];
 
 		long result = tardis.ttl(key);
@@ -463,7 +463,7 @@ public class SocketServer implements IConnectionScoped,
 	    // LIST COMMANDS
 	    //
 
-	    else if (cmd.equals("RPUSH")) {
+	    else if (cmd.equals("rpush")) {
 		String key = args[0];
 		String value = parseString(nbc, args[1]);
 
@@ -475,7 +475,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LPUSH")) {
+	    else if (cmd.equals("lpush")) {
 		String key = args[0];
 		String value = parseString(nbc, args[1]);
 
@@ -487,7 +487,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LLEN")) {
+	    else if (cmd.equals("llen")) {
 		String key = args[0];
 
 		try {
@@ -498,7 +498,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LRANGE")) {
+	    else if (cmd.equals("lrange")) {
 		String key = args[0];
 		int start = parseInteger(args[1]);
 		int end = parseInteger(args[2]);
@@ -511,7 +511,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LTRIM")) {
+	    else if (cmd.equals("ltrim")) {
 		String key = args[0];
 		int start = parseInteger(args[1]);
 		int end = parseInteger(args[2]);
@@ -524,7 +524,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LINDEX")) {
+	    else if (cmd.equals("lindex")) {
 		String key = args[0];
 		int index = parseInteger(args[1]);
 
@@ -536,7 +536,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LSET")) {
+	    else if (cmd.equals("lset")) {
 		String key = args[0];
 		int index = parseInteger(args[1]);
 		String value = parseString(nbc, args[2]);
@@ -549,7 +549,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LREM")) {
+	    else if (cmd.equals("lrem")) {
 		String key = args[0];
 		int count = parseInteger(args[1]);
 		String value = parseString(nbc, args[2]);
@@ -562,7 +562,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("LPOP")) {
+	    else if (cmd.equals("lpop")) {
 		String key = args[0];
 
 		try {
@@ -573,7 +573,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("RPOP")) {
+	    else if (cmd.equals("rpop")) {
 		String key = args[0];
 
 		try {
@@ -584,7 +584,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("RPOPLPUSH")) {
+	    else if (cmd.equals("rpoplpush")) {
 		String src = args[0];
 		String dest = parseString(nbc, args[1]);
 
@@ -600,7 +600,7 @@ public class SocketServer implements IConnectionScoped,
 	    // SETS COMMANDS
 	    //
 
-	    else if (cmd.equals("SADD")) {
+	    else if (cmd.equals("sadd")) {
 	    	String key = args[0];
 	    	String member = parseString(nbc, args[1]);
 
@@ -612,7 +612,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SREM")) {
+	    else if (cmd.equals("srem")) {
 	    	String key = args[0];
 	    	String member = parseString(nbc, args[1]);
 
@@ -624,7 +624,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-            else if (cmd.equals("SPOP")) {
+            else if (cmd.equals("spop")) {
 	    	String key = args[0];
 
 		try {
@@ -635,7 +635,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SMOVE")) {
+	    else if (cmd.equals("smove")) {
 	    	String src = args[0];
 	    	String dest = args[1];
 	    	String member = parseString(nbc, args[2]);
@@ -648,7 +648,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-            else if (cmd.equals("SCARD")) {
+            else if (cmd.equals("scard")) {
 	    	String key = args[0];
 
 		try {
@@ -659,7 +659,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SISMEMBER")) {
+	    else if (cmd.equals("sismember")) {
 	    	String key = args[0];
 	    	String member = parseString(nbc, args[1]);
 
@@ -671,7 +671,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SMEMBERS")) {
+	    else if (cmd.equals("smembers")) {
 		try {
 		    List<String> values = tardis.sinter(args);
 		    printList(nbc, values);
@@ -680,7 +680,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SRANDMEMBER")) {
+	    else if (cmd.equals("srandmember")) {
 	    	String key = args[0];
 
 		try {
@@ -691,7 +691,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SINTER")) {
+	    else if (cmd.equals("sinter")) {
 		try {
 		    List<String> values = tardis.sinter(args);;
 		    printList(nbc, values);
@@ -700,7 +700,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SINTERSTORE")) {
+	    else if (cmd.equals("sinterstore")) {
 		try {
 		    int result = tardis.sinterstore(args);;
 		    printInteger(nbc, result);
@@ -709,7 +709,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SUNION")) {
+	    else if (cmd.equals("sunion")) {
 		try {
 		    List<String> values = tardis.sunion(args);;
 		    printList(nbc, values);
@@ -718,7 +718,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SUNIONSTORE")) {
+	    else if (cmd.equals("sunionstore")) {
 		try {
 		    int result = tardis.sunionstore(args);;
 		    printInteger(nbc, result);
@@ -727,7 +727,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SDIFF")) {
+	    else if (cmd.equals("sdiff")) {
 		try {
 		    List<String> values = tardis.sdiff(args);;
 		    printList(nbc, values);
@@ -736,7 +736,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("SDIFFSTORE")) {
+	    else if (cmd.equals("sdiffstore")) {
 		try {
 		    int result = tardis.sdiffstore(args);;
 		    printInteger(nbc, result);
@@ -749,7 +749,7 @@ public class SocketServer implements IConnectionScoped,
 	    // ZSETS COMMANDS
 	    //
 
-	    else if (cmd.equals("ZADD")) {
+	    else if (cmd.equals("zadd")) {
 	    	String key = args[0];
 	    	String score = args[1];
 	    	String member = parseString(nbc, args[2]);
@@ -762,7 +762,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZINCRBY")) {
+	    else if (cmd.equals("zincrby")) {
 	    	String key = args[0];
 	    	String score = args[1];
 	    	String member = parseString(nbc, args[2]);
@@ -775,7 +775,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZREM")) {
+	    else if (cmd.equals("zrem")) {
 	    	String key = args[0];
 	    	String member = parseString(nbc, args[1]);
 
@@ -787,7 +787,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZRANGE")) {
+	    else if (cmd.equals("zrange")) {
 		try {
 		    String key = args[0];
 		    int start = parseInteger(args[1]);
@@ -807,7 +807,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZREVRANGE")) {
+	    else if (cmd.equals("zrevrange")) {
 		try {
 		    String key = args[0];
 		    int start = parseInteger(args[1]);
@@ -826,7 +826,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZRANGEBYSCORE")) {
+	    else if (cmd.equals("zrangebyscore")) {
 		try {
 	           String key = args[0];
 		   String min = args[1];
@@ -853,7 +853,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("ZREMRANGEBYSCORE")) {
+	    else if (cmd.equals("zremrangebyscore")) {
 		String key = args[0];
 		String min = args[1];
 		String max = args[2];
@@ -866,7 +866,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-            else if (cmd.equals("ZCARD")) {
+            else if (cmd.equals("zcard")) {
 	    	String key = args[0];
 
 		try {
@@ -877,7 +877,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-            else if (cmd.equals("ZSCORE")) {
+            else if (cmd.equals("zscore")) {
 	    	String key = args[0];
 	    	String member = parseString(nbc, args[1]);
 
@@ -893,7 +893,7 @@ public class SocketServer implements IConnectionScoped,
 	    // SORT
 	    //
 
-	    else if (cmd.equals("SORT")) {
+	    else if (cmd.equals("sort")) {
 	        String key = null;
 		boolean asc = true;
 		boolean alpha = false;
@@ -941,7 +941,7 @@ public class SocketServer implements IConnectionScoped,
 	    // MULTIPLE DB COMMANDS
 	    //
 	    
-	    else if (cmd.equals("SELECT")) {
+	    else if (cmd.equals("select")) {
 		int index = parseInteger(args[0]);
 
 		try {
@@ -953,7 +953,7 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("MOVE")) {
+	    else if (cmd.equals("move")) {
 		String key = args[0];
 		int index = parseInteger(args[1]);
 
@@ -965,24 +965,24 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else if (cmd.equals("FLUSHDB")) {
+	    else if (cmd.equals("flushdb")) {
 	        tardis.flushdb();
 		printStatus(nbc);
 	    }
 
-	    else if (cmd.equals("FLUSHALL")) {
+	    else if (cmd.equals("flushall")) {
 	        Tardis.flushall();
 		printStatus(nbc);
 	    }
 
-	    else if (cmd.equals("INFO")) {
+	    else if (cmd.equals("info")) {
 		printResult(nbc, "version:"
 			+ Tardis.V_MAJOR
 			+ "."
 			+ Tardis.V_MINOR);
 	    }
 
-	    else if (cmd.equals("DEBUG")) {
+	    else if (cmd.equals("debug")) {
 		cmd = args[0];
 		if (cmd.equalsIgnoreCase("RELOAD")) {
 		    try {
