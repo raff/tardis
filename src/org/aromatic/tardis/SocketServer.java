@@ -898,7 +898,7 @@ public class SocketServer implements IConnectionScoped,
 		boolean asc = true;
 		boolean alpha = false;
 		String pattern_by = null;
-		String pattern_get = null;
+		List<String> pattern_get = new ArrayList<String>();
 		int start = 0;
 		int count = Integer.MAX_VALUE;
 		String store = null;
@@ -918,7 +918,7 @@ public class SocketServer implements IConnectionScoped,
 			else if ("BY".equalsIgnoreCase(arg))
 			    pattern_by = args[++i];
 			else if ("GET".equalsIgnoreCase(arg))
-			    pattern_get = args[++i];
+			    pattern_get.add(args[++i]);
 			else if ("STORE".equalsIgnoreCase(arg))
                             store = args[++i];
 			else if ("LIMIT".equalsIgnoreCase(arg)) {

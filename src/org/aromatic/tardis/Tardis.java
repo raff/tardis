@@ -920,7 +920,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
     // SORT
     //
 
-    public synchronized List<String> sort(String key, boolean asc, boolean alpha, int start, int count, String pattern_by, String pattern_get, String result)
+    public synchronized List<String> sort(String key, boolean asc, boolean alpha, int start, int count, String pattern_by, List<String> pattern_get, String result)
     {
 	checkExpiry(key);
         Object v = repository.get(key);
@@ -970,16 +970,24 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	for (ScoreObject so : list.subList(start, end)) {
 	    String value = so.value;
 
-	    if (pattern_get != null) {
-		String getkey = pattern_get.replace("*", value);
-		v = repository.get(getkey);
-		if (v instanceof String)
-		   value = (String) v;
-                else
-		   value = "";
-	    }
+	    if (pattern_get.isEmpty())
+	    	sorted.add(value);
+	    else {
+	        for (String pget : pattern_get) {
+		    if (pget.equals("#"))
+		        ; // return value
+		    else {
+		        String getkey = pget.replace("*", value);
+		        v = repository.get(getkey);
+		        if (v instanceof String)
+		           value = (String) v;
+		        else
+		           value = "";
+		    }
 
-	    sorted.add(value);
+	    	    sorted.add(value);
+	        }
+	    }
         }
         
 	if (result != null) {
