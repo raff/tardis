@@ -14,16 +14,19 @@ public class SocketServer implements IConnectionScoped,
     protected static boolean DEBUG = false;
 
     protected static final String EOL = "\r\n";
-    protected static final int VARIABLE = Integer.MAX_VALUE;
     protected static File tardisFile = new File("tardis.db");
     protected static IServer srv = null;
 
-    protected static final Map<String, Integer> commands = 
-	    new HashMap<String, Integer>();
+    protected static final int VARARGS = -1;
+
+    protected static final Map<String, Command> commands = 
+	    new HashMap<String, Command>();
 
     protected static int connected = 0;
 
     protected int selected;
+    protected boolean multi = false;
+    protected List<Request> requests = new ArrayList<Request>();
 
     @Override
     public Object clone() throws CloneNotSupportedException {
@@ -35,91 +38,1189 @@ public class SocketServer implements IConnectionScoped,
     {
         selected = 0;
     }
+
+    private static class Command {
+	public int nArgs = 0;
+	public boolean stringArg = false;
+
+	public String toString() {
+	    return this.getClass().getName() + " - nArgs:" + nArgs + ", stringArg:" + stringArg;
+        }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	}
+    }
+
+    //
+    // SERVER COMMANDS
+    //
+
+    private static class NopCommand extends Command {
+	NopCommand() { nArgs = 0; }
+    }
+
+    private static class PingCommand extends Command {
+	PingCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    printStatus(nbc, "PONG");
+	}
+    }
 	    
+    private static class QuitCommand extends Command {
+	QuitCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    nbc.close();
+	}
+    }
+
+    private static class ShutdownCommand extends Command {
+	ShutdownCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) {
+	    shutdownServer();
+	}
+    }
+	    
+    private static class SaveCommand extends Command {
+	SaveCommand(int type) { nArgs = 0; commandType = type; }
+
+	int commandType;
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		Tardis.save(tardisFile);
+
+		if (commandType == 1)
+		    printStatus(nbc, "Background saving started");
+		else if (commandType == 2)
+		    printStatus(nbc, "Background append only file rewriting started");
+		else
+		    printStatus(nbc);
+	    } catch(Exception e) {
+		e.printStackTrace(System.out);
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LastSaveCommand extends Command {
+	LastSaveCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    printInteger(nbc, tardisFile.lastModified());
+	}
+    }
+
+    private static class SetCommand extends Command {
+	SetCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    tardis.set(key, value);
+	    printStatus(nbc);
+	}
+    }
+
+    //
+    // STRING COMMANDS
+    //
+
+    private static class GetCommand extends Command {
+	GetCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		String value = tardis.get(key);
+		printResult(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class GetSetCommand extends Command {
+	GetSetCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    try {
+		String result = tardis.getset(key, value);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class MgetCommand extends Command {
+	MgetCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    List<String> values = tardis.mget(args);
+	    printList(nbc, values);
+	}
+    }
+
+    private static class SetnxCommand extends Command {
+	SetnxCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    boolean result = tardis.setnx(key, value);
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class MsetCommand extends Command {
+	MsetCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    if (args.length % 2 != 0)
+	        printError(nbc, "wrong number of arguments");
+	    else {
+	        tardis.mset(args);
+	        printStatus(nbc);
+	    }
+	}
+    }
+
+    private static class MsetnxCommand extends Command {
+	MsetnxCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    if (args.length % 2 != 0)
+	        printError(nbc, "wrong number of arguments");
+	    else {
+		boolean result = tardis.msetnx(args);
+		printInteger(nbc, result);
+	    }
+	}
+    }
+
+    private static class IncrCommand extends Command {
+	IncrCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		long value = tardis.incr(key);
+		printInteger(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class IncrbyCommand extends Command {
+	IncrbyCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    long step = parseLong(args[1]);
+
+	    try {
+		long value = tardis.incrby(key, step);
+		printInteger(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class DecrCommand extends Command {
+	DecrCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		long value = tardis.decr(key);
+		printInteger(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class DecrbyCommand extends Command {
+	DecrbyCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    long step = parseLong(args[1]);
+
+	    try {
+		long value = tardis.decrby(key, step);
+		printInteger(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ExistsCommand extends Command {
+	ExistsCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    boolean result = tardis.exists(key);
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class DelCommand extends Command {
+	DelCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    int result = tardis.del(args);
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class TypeCommand extends Command {
+	TypeCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    String result = tardis.type(key);
+	    printResult(nbc, result);
+	}
+    }
+
+    //
+    // KEY SPACE COMMANDS
+    //
+
+    private static class KeysCommand extends Command {
+	KeysCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String pattern = args[0];
+
+	    String result = tardis.keys(pattern);
+	    printResult(nbc, result);
+	}
+    }
+
+    private static class RandomkeyCommand extends Command {
+	RandomkeyCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String result = tardis.randomkey();
+	    printResult(nbc, result);
+	}
+    }
+
+    private static class RenameCommand extends Command {
+	RenameCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String oldname = args[0];
+	    String newname = args[1];
+
+	    try {
+		tardis.rename(oldname, newname);
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class RenamenxCommand extends Command {
+	RenamenxCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String oldname = args[0];
+	    String newname = args[1];
+
+	    try {
+		boolean result = tardis.renamenx(oldname, newname);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class DbsizeCommand extends Command {
+	DbsizeCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    long result = tardis.dbsize();
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class ExpireCommand extends Command {
+	ExpireCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    long time = parseLong(args[1]) * 1000;
+
+	    boolean result = tardis.expireat(key, System.currentTimeMillis()+time);
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class ExpireatCommand extends Command {
+	ExpireatCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    long time = parseLong(args[1]) * 1000;
+
+	    boolean result = tardis.expireat(key, time);
+	    printInteger(nbc, result);
+	}
+    }
+
+    private static class TtlCommand extends Command {
+	TtlCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    long result = tardis.ttl(key);
+	    if (result > 0)
+		    result = (result+499)/1000;
+
+	    printInteger(nbc, result);
+	}
+    }
+
+    //
+    // LIST COMMANDS
+    //
+
+    private static class RpushCommand extends Command {
+	RpushCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    try {
+		tardis.rpush(key, value);
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LpushCommand extends Command {
+	LpushCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    try {
+		tardis.lpush(key, value);
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LlenCommand extends Command {
+	LlenCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		int result = tardis.llen(key);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LrangeCommand extends Command {
+	LrangeCommand() { nArgs = 3; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int start = parseInteger(args[1]);
+	    int end = parseInteger(args[2]);
+
+	    try {
+		List<String> values = tardis.lrange(key, start, end);
+		printList(nbc, values);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LtrimCommand extends Command {
+	LtrimCommand() { nArgs = 3; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int start = parseInteger(args[1]);
+	    int end = parseInteger(args[2]);
+
+	    try {
+		tardis.ltrim(key, start, end);
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LindexCommand extends Command {
+	LindexCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int index = parseInteger(args[1]);
+
+	    try {
+		String result = tardis.lindex(key, index);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LsetCommand extends Command {
+	LsetCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int index = parseInteger(args[1]);
+	    String value = args[2];
+
+	    try {
+		tardis.lset(key, index, value);
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LremCommand extends Command {
+	LremCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int count = parseInteger(args[1]);
+	    String value = args[2];
+
+	    try {
+		int result = tardis.lrem(key, count, value);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class LpopCommand extends Command {
+	LpopCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		String result = tardis.lpop(key);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class RpopCommand extends Command {
+	RpopCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		String result = tardis.rpop(key);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class RpoplpushCommand extends Command {
+	RpoplpushCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String src = args[0];
+	    String dest = args[1];
+
+	    try {
+		String result = tardis.rpoplpush(src, dest);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    //
+    // SETS COMMANDS
+    //
+
+    private static class SaddCommand extends Command {
+	SaddCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		boolean result = tardis.sadd(key, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SremCommand extends Command {
+	SremCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		boolean result = tardis.srem(key, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SpopCommand extends Command {
+	SpopCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		String result = tardis.spop(key);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SmoveCommand extends Command {
+	SmoveCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String src = args[0];
+	    String dest = args[1];
+	    String member = args[2];
+
+	    try {
+		boolean result = tardis.smove(src, dest, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ScardCommand extends Command {
+	ScardCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		int result = tardis.scard(key);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SismemberCommand extends Command {
+	SismemberCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		boolean result = tardis.sismember(key, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SmembersCommand extends Command {
+	SmembersCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		List<String> values = tardis.sinter(args);
+		printList(nbc, values);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SrandmemberCommand extends Command {
+	SrandmemberCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		String result = tardis.srandmember(key);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SinterCommand extends Command {
+	SinterCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		List<String> values = tardis.sinter(args);;
+		printList(nbc, values);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SinterstoreCommand extends Command {
+	SinterstoreCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		int result = tardis.sinterstore(args);;
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SunionCommand extends Command {
+	SunionCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		List<String> values = tardis.sunion(args);;
+		printList(nbc, values);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SunionstoreCommand extends Command {
+	SunionstoreCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		int result = tardis.sunionstore(args);;
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SdiffCommand extends Command {
+	SdiffCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		List<String> values = tardis.sdiff(args);;
+		printList(nbc, values);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class SdiffstoreCommand extends Command {
+	SdiffstoreCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		int result = tardis.sdiffstore(args);;
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    //
+    // ZSETS COMMANDS
+    //
+
+    private static class ZaddCommand extends Command {
+	ZaddCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String score = args[1];
+	    String member = args[2];
+
+	    try {
+		boolean result = tardis.zadd(key, score, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZincrbyCommand extends Command {
+	ZincrbyCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String score = args[1];
+	    String member = args[2];
+
+	    try {
+		double result = tardis.zincrby(key, score, member);
+		printDouble(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZremCommand extends Command {
+	ZremCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		boolean result = tardis.zrem(key, member);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZrangeCommand extends Command {
+	ZrangeCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		String key = args[0];
+		int start = parseInteger(args[1]);
+		int end = parseInteger(args[2]);
+		boolean withscores = (args.length > 3 
+		    && args[3].equalsIgnoreCase("WITHSCORES"));
+
+		List<String> values = tardis.zrange(
+		    key, start, end, false, withscores);
+
+		printList(nbc, values);
+	    } catch(ArrayIndexOutOfBoundsException e) {
+		printError(nbc, "wrong number of arguments for '" 
+		    + args[0].toLowerCase() + "' command");
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZrevrangeCommand extends Command {
+	ZrevrangeCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		String key = args[0];
+		int start = parseInteger(args[1]);
+		int end = parseInteger(args[2]);
+		boolean withscores = (args.length > 3 
+		    && args[3].equalsIgnoreCase("WITHSCORES"));
+
+		List<String> values = tardis.zrange(
+		    key, start, end, true, withscores);
+		printList(nbc, values);
+	    } catch(ArrayIndexOutOfBoundsException e) {
+		printError(nbc, "wrong number of arguments for '" 
+		    + args[0].toLowerCase() + "' command");
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZrangebyscoreCommand extends Command {
+	ZrangebyscoreCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+	       String key = args[0];
+	       String min = args[1];
+	       String max = args[2];
+	       int offset = 0;
+	       int count = Integer.MAX_VALUE;
+
+		for (int i=3; i < args.length; i++) {
+		    String arg = args[i];
+
+		    if ("LIMIT".equalsIgnoreCase(arg)) {
+			offset = parseInteger(args[++i]);
+			count = parseInteger(args[++i]);
+		    } else
+			throw new UnsupportedOperationException(Tardis.SYNTAX);
+		}
+	    
+		List<String> values = tardis.zrangebyscore(key, min, max, offset, count);
+		printList(nbc, values);
+	    } catch(ArrayIndexOutOfBoundsException e) {
+		printError(nbc, Tardis.SYNTAX);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZremrangebyscoreCommand extends Command {
+	ZremrangebyscoreCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String min = args[1];
+	    String max = args[2];
+
+	    try {
+		int result = tardis.zremrangebyscore(key, min, max);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZcardCommand extends Command {
+	ZcardCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		int result = tardis.zcard(key);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZscoreCommand extends Command {
+	ZscoreCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		String result = tardis.zscore(key, member);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    //
+    // SORT
+    //
+
+    private static class SortCommand extends Command {
+	SortCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = null;
+	    boolean asc = true;
+	    boolean alpha = false;
+	    String pattern_by = null;
+	    List<String> pattern_get = new ArrayList<String>();
+	    int start = 0;
+	    int count = Integer.MAX_VALUE;
+	    String store = null;
+
+	    try {
+		for (int i=0; i < args.length; i++) {
+		    String arg = args[i];
+
+		    if (i == 0)
+			key = arg;
+		    else if ("ASC".equalsIgnoreCase(arg))
+			asc = true;
+		    else if ("DESC".equalsIgnoreCase(arg))
+			asc = false;
+		    else if ("ALPHA".equalsIgnoreCase(arg))
+			alpha = true;
+		    else if ("BY".equalsIgnoreCase(arg))
+			pattern_by = args[++i];
+		    else if ("GET".equalsIgnoreCase(arg))
+			pattern_get.add(args[++i]);
+		    else if ("STORE".equalsIgnoreCase(arg))
+			store = args[++i];
+		    else if ("LIMIT".equalsIgnoreCase(arg)) {
+			start = parseInteger(args[++i]);
+			count = parseInteger(args[++i]);
+		    } else
+			throw new UnsupportedOperationException(Tardis.SYNTAX);
+		}
+
+		List<String> values = tardis.sort(key, asc, alpha, start, count, pattern_by, pattern_get, store);
+		printList(nbc, values);
+	    } catch(ArrayIndexOutOfBoundsException e) {
+		printError(nbc, Tardis.SYNTAX);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    //
+    // MULTIPLE DB COMMANDS
+    //
+    
+    private static class SelectCommand extends Command {
+	private int selection = -1;
+
+	SelectCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    int index = parseInteger(args[0]);
+
+	    try {
+		Tardis.select(index);
+		selection = index;
+		printStatus(nbc);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+
+	public int getSelected() {
+		return selection;
+	}
+    }
+
+    private static class MoveCommand extends Command {
+	MoveCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int index = parseInteger(args[1]);
+
+	    try {
+		boolean result = tardis.move(key, index);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class FlushdbCommand extends Command {
+	FlushdbCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    tardis.flushdb();
+	    printStatus(nbc);
+	}
+    }
+
+    private static class FlushallCommand extends Command {
+	FlushallCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    Tardis.flushall();
+	    printStatus(nbc);
+	}
+    }
+
+    private static class InfoCommand extends Command {
+	InfoCommand() { nArgs = 0; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    printResult(nbc, "version:"
+		    + Tardis.V_MAJOR
+		    + "."
+		    + Tardis.V_MINOR);
+	}
+    }
+
+    private static class DebugCommand extends Command {
+	DebugCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String cmd = args[0];
+	    if (cmd.equalsIgnoreCase("RELOAD")) {
+		try {
+		    Tardis.save(tardisFile);
+		    Tardis.flushall();
+		    Tardis.load(tardisFile);
+
+		    printStatus(nbc);
+		} catch(Exception e) {
+		    printError(nbc, e.getMessage());
+		}
+	    }
+
+	    else
+		printStatus(nbc);
+	}
+    }
+
+    private static class Request {
+	public Command cmd;
+	public String args[];
+
+	Request(Command cmd, String args[]) {
+	    this.cmd = cmd;
+	    this.args = args;
+	}
+
+	public int run(int dbIndex, INonBlockingConnection nbc) throws IOException {
+	    Tardis tardis = Tardis.select(dbIndex);
+	    cmd.run(tardis, args, nbc);
+
+	    if (cmd instanceof SelectCommand)
+		dbIndex = ((SelectCommand)cmd).getSelected();
+
+	    return dbIndex;
+	}
+    }
+
     public static void main(String[] args)
     {
 	if (args.length > 0)
 		DEBUG = true;
 
-	commands.put("",	    0);
-    	commands.put("ping",        0);
-    	commands.put("quit",        0);
-    	commands.put("shutdown",    0);
-	commands.put("save",        0);
-	commands.put("bgsave",      0);
-	commands.put("bgrewriteaof",0);
-	commands.put("lastsave",    0);
+	commands.put("",	    new NopCommand());
+    	commands.put("ping",        new PingCommand());
+    	commands.put("quit",        new QuitCommand());
+    	commands.put("shutdown",    new ShutdownCommand());
+	commands.put("save",        new SaveCommand(0));
+	commands.put("bgsave",      new SaveCommand(1));
+	commands.put("bgrewriteaof",new SaveCommand(2));
+	commands.put("lastsave",    new LastSaveCommand());
 
-    	commands.put("set",         2);
-    	commands.put("get",         1);
-    	commands.put("getset",      2);
-    	commands.put("mget",        VARIABLE);
-    	commands.put("setnx",       2);
-    	commands.put("mset",        VARIABLE);
-    	commands.put("msetnx",      VARIABLE);
-    	commands.put("incr",        1);
-    	commands.put("incrby",      2);
-    	commands.put("decr",        1);
-    	commands.put("decrby",      2);
-    	commands.put("exists",      1);
-    	commands.put("del",         VARIABLE);
-    	commands.put("type",        1);
+    	commands.put("set",         new SetCommand());
+    	commands.put("get",         new GetCommand());
+    	commands.put("getset",      new GetSetCommand());
+    	commands.put("mget",        new MgetCommand());
+    	commands.put("setnx",       new SetnxCommand());
+    	commands.put("mset",        new MsetCommand());
+    	commands.put("msetnx",      new MsetnxCommand());
+    	commands.put("incr",        new IncrCommand());
+    	commands.put("incrby",      new IncrbyCommand());
+    	commands.put("decr",        new DecrCommand());
+    	commands.put("decrby",      new DecrbyCommand());
+    	commands.put("exists",      new ExistsCommand());
+    	commands.put("del",         new DelCommand());
+    	commands.put("type",        new TypeCommand());
 
-    	commands.put("keys",        1);
-    	commands.put("randomkey",   0);
-    	commands.put("rename",      2);
-    	commands.put("renamenx",    2);
-    	commands.put("dbsize",      0);
-    	commands.put("expire",      2);
-    	commands.put("expireat",    2);
-    	commands.put("ttl",         1);
+    	commands.put("keys",        new KeysCommand());
+    	commands.put("randomkey",   new RandomkeyCommand());
+    	commands.put("rename",      new RenameCommand());
+    	commands.put("renamenx",    new RenamenxCommand());
+    	commands.put("dbsize",      new DbsizeCommand());
+    	commands.put("expire",      new ExpireCommand());
+    	commands.put("expireat",    new ExpireatCommand());
+    	commands.put("ttl",         new TtlCommand());
 
-	commands.put("rpush",       2);
-	commands.put("lpush",       2);
-	commands.put("llen",        1);
-	commands.put("lrange",      3);
-	commands.put("ltrim",       3);
-	commands.put("lindex",      2);
-	commands.put("lset",        3);
-	commands.put("lrem",        3);
-	commands.put("lpop",        1);
-	commands.put("rpop",        1);
-	commands.put("rpoplpush",   2);
+	commands.put("rpush",       new RpushCommand());
+	commands.put("lpush",       new LpushCommand());
+	commands.put("llen",        new LlenCommand());
+	commands.put("lrange",      new LrangeCommand());
+	commands.put("ltrim",       new LtrimCommand());
+	commands.put("lindex",      new LindexCommand());
+	commands.put("lset",        new LsetCommand());
+	commands.put("lrem",        new LremCommand());
+	commands.put("lpop",        new LpopCommand());
+	commands.put("rpop",        new RpopCommand());
+	commands.put("rpoplpush",   new RpoplpushCommand());
 
-	commands.put("sadd",        2);
-	commands.put("srem",        2);
-	commands.put("spop",        1);
-	commands.put("smove",       3);
-        commands.put("scard",       1);
-	commands.put("sismember",   2);
-	commands.put("smembers",    1);
-	commands.put("srandmember", 1);
-	commands.put("sinter",      VARIABLE);
-	commands.put("sinterstore", VARIABLE);
-	commands.put("sunion",      VARIABLE);
-	commands.put("sunionstore", VARIABLE);
-	commands.put("sdiff",       VARIABLE);
-	commands.put("sdiffstore",  VARIABLE);
+	commands.put("sadd",        new SaddCommand());
+	commands.put("srem",        new SremCommand());
+	commands.put("spop",        new SpopCommand());
+	commands.put("smove",       new SmoveCommand());
+        commands.put("scard",       new ScardCommand());
+	commands.put("sismember",   new SismemberCommand());
+	commands.put("smembers",    new SmembersCommand());
+	commands.put("srandmember", new SrandmemberCommand());
+	commands.put("sinter",      new SinterCommand());
+	commands.put("sinterstore", new SinterstoreCommand());
+	commands.put("sunion",      new SunionCommand());
+	commands.put("sunionstore", new SunionstoreCommand());
+	commands.put("sdiff",       new SdiffCommand());
+	commands.put("sdiffstore",  new SdiffstoreCommand());
 
-	commands.put("zadd",        3);
-	commands.put("zincrby",     3);
-	commands.put("zrem",        2);
-	commands.put("zrange",      VARIABLE);
-	commands.put("zrevrange",   VARIABLE);
-	commands.put("zremrangebyscore", 3);
-	commands.put("zrangebyscore",    VARIABLE);
-	commands.put("zcard",       1);
-	commands.put("zscore",      2);
+	commands.put("zadd",        new ZaddCommand());
+	commands.put("zincrby",     new ZincrbyCommand());
+	commands.put("zrem",        new ZremCommand());
+	commands.put("zrange",      new ZrangeCommand());
+	commands.put("zrevrange",   new ZrevrangeCommand());
+	commands.put("zremrangebyscore", new ZremrangebyscoreCommand());
+	commands.put("zrangebyscore",    new ZrangebyscoreCommand());
+	commands.put("zcard",       new ZcardCommand());
+	commands.put("zscore",      new ZscoreCommand());
 
-	commands.put("sort",        VARIABLE);
+	commands.put("sort",        new SortCommand());
 
-	commands.put("select",      1);
-	commands.put("move",        2);
-	commands.put("flushdb",     0);
-	commands.put("flushall",    0);
+	commands.put("select",      new SelectCommand());
+	commands.put("move",        new MoveCommand());
+	commands.put("flushdb",     new FlushdbCommand());
+	commands.put("flushall",    new FlushallCommand());
 
-	commands.put("info",        0);
-	commands.put("debug",       1);
+	commands.put("info",        new InfoCommand());
+	commands.put("debug",       new DebugCommand());
+
+	commands.put("multi",	    new NopCommand()); // executed inline
+	commands.put("exec",	    new NopCommand()); // executed inline
 
 	if (tardisFile.exists()) {
 	    System.out.println("loading data from " + tardisFile);
@@ -185,17 +1286,17 @@ public class SocketServer implements IConnectionScoped,
 		System.out.println("req: " + data);
 
 	    String args[] = {};
-	    String cmd = "";
+	    String cmdname = "";
 
 	    if (data.startsWith("*")) {
 		List<String> list = parseList(nbc, data);
 		if (list !=  null) {
-		    cmd = list.remove(0).toLowerCase();
+		    cmdname = list.remove(0).toLowerCase();
 		    args = list.toArray(new String[0]);
 		}
 	    } else {
 	        args = data.trim().split(" ", 2);
-	        cmd = args[0].toLowerCase();
+	        cmdname = args[0].toLowerCase();
 
 	        if (args.length > 1)
 	    	    args = args[1].split(" ");
@@ -203,807 +1304,72 @@ public class SocketServer implements IConnectionScoped,
 	            args = new String[0];
 	    }
 
-	    Integer n = commands.get(cmd);
-	    if (DEBUG)
-		System.out.println("cmd: " + cmd + ", params: " + n);
+	    Command cmd = commands.get(cmdname);
+	    if (cmd != null) {
+		if (cmd.stringArg) {
+		    String arg = args[args.length-1];
+		    args[args.length-1] = parseString(nbc, arg);
+		}
+	    }
 
-	    Tardis tardis = Tardis.select(selected);
+	    if (DEBUG) {
+		System.out.println("cmd: " + cmdname 
+			+ ", info: " + cmd);
+	    }
 
-	    if (n == null)
+	    if (cmd == null)
 		printError(nbc, "unknown command");
 
-	    else if (n != VARIABLE && n != args.length) {
+	    else if (cmd.nArgs != VARARGS && cmd.nArgs != args.length) {
 	        if (DEBUG) {
-		    System.out.println("command: " + cmd);
+		    System.out.println("command: " + cmdname);
 		    System.out.println("args: " + args.length);
 		}
 
 		printError(nbc, "wrong number of arguments for '" 
-		    + cmd + "' command");
+		    + cmdname + "' command");
 	    }
 
-	    else if (cmd.equals("")) {
-		//printEmpty(nbc);
-	    }
+	    else if (cmdname.equals("multi")) {
+	        multi = true;
+	        printStatus(nbc);
+            } 
 
-	    else if (cmd.equals("ping"))
-		printStatus(nbc, "PONG");
-
-	    else if (cmd.equals("shutdown"))
-		shutdownServer();
-
-	    else if (cmd.equals("save") 
-		|| cmd.equals("bgsave")
-		|| cmd.equals("bgrewriteaof")) {
-		try {
-		    Tardis.save(tardisFile);
-
-		    if (cmd.equals("bgsave"))
-			printStatus(nbc, "Background saving started");
-		    else if (cmd.equals("bgrewriteaof"))
-			printStatus(nbc, "Background append only file rewriting started");
-		    else
-			printStatus(nbc);
-		} catch(Exception e) {
-		    e.printStackTrace(System.out);
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lastsave")) {
-		printInteger(nbc, tardisFile.lastModified());
-	    }
-
-	    else if (cmd.equals("quit"))
-		nbc.close();
-
-	    //
-	    // STRING COMMANDS
-	    //
-
-	    else if (cmd.equals("set")) {
-		String key = args[0];
-		String value = parseString(nbc, args[1]);
-
-		tardis.set(key, value);
-		printStatus(nbc);
-	    }
-
-	    else if (cmd.equals("get")) {
-		String key = args[0];
-
-		try {
-		    String value = tardis.get(key);
-		    printResult(nbc, value);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("getset")) {
-		String key = args[0];
-	        String value = parseString(nbc, args[1]);
-
-		try {
-		    String result = tardis.getset(key, value);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("mget")) {
-		List<String> values = tardis.mget(args);
-		printList(nbc, values);
-	    }
-
-	    else if (cmd.equals("setnx")) {
-		String key = args[0];
-	        String value = parseString(nbc, args[1]);
-
-		boolean result = tardis.setnx(key, value);
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("mset")) {
-		if (args.length % 2 != 0)
-			printError(nbc, "wrong number of arguments");
+	    else if (cmdname.equals("exec")) {
+		if (!multi)
+			printError(nbc, "EXEC without MULTI");
 		else {
-			tardis.mset(args);
-			printStatus(nbc);
-		}
-	    }
-
-	    else if (cmd.equals("msetnx")) {
-		if (args.length % 2 != 0)
-			printError(nbc, "wrong number of arguments");
-		else {
-			boolean result = tardis.msetnx(args);
-			printInteger(nbc, result);
-		}
-	    }
-
-	    else if (cmd.equals("incr")) {
-		String key = args[0];
-
-		try {
-		    long value = tardis.incr(key);
-		    printInteger(nbc, value);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("incrby")) {
-		String key = args[0];
-		long step = parseLong(args[1]);
-
-		try {
-		    long value = tardis.incrby(key, step);
-		    printInteger(nbc, value);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("decr")) {
-		String key = args[0];
-
-		try {
-		    long value = tardis.decr(key);
-		    printInteger(nbc, value);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("decrby")) {
-		String key = args[0];
-		long step = parseLong(args[1]);
-
-		try {
-		    long value = tardis.decrby(key, step);
-		    printInteger(nbc, value);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("exists")) {
-		String key = args[0];
-
-		boolean result = tardis.exists(key);
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("del")) {
-		int result = tardis.del(args);
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("type")) {
-		String key = args[0];
-
-		String result = tardis.type(key);
-		printResult(nbc, result);
-	    }
-
-	    //
-	    // KEY SPACE COMMANDS
-	    //
-
-	    else if (cmd.equals("keys")) {
-		String pattern = args[0];
-
-		String result = tardis.keys(pattern);
-		printResult(nbc, result);
-	    }
-
-	    else if (cmd.equals("randomkey")) {
-		String result = tardis.randomkey();
-		printResult(nbc, result);
-	    }
-
-	    else if (cmd.equals("rename")) {
-		String oldname = args[0];
-		String newname = args[1];
-
-		try {
-		    tardis.rename(oldname, newname);
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("renamenx")) {
-		String oldname = args[0];
-		String newname = args[1];
-
-		try {
-		    boolean result = tardis.renamenx(oldname, newname);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("dbsize")) {
-		long result = tardis.dbsize();
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("expire")) {
-		String key = args[0];
-		long time = parseLong(args[1]) * 1000;
-
-		boolean result = tardis.expireat(key, System.currentTimeMillis()+time);
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("expireat")) {
-		String key = args[0];
-		long time = parseLong(args[1]) * 1000;
-
-		boolean result = tardis.expireat(key, time);
-		printInteger(nbc, result);
-	    }
-
-	    else if (cmd.equals("ttl")) {
-		String key = args[0];
-
-		long result = tardis.ttl(key);
-		if (result > 0)
-			result = (result+499)/1000;
-
-		printInteger(nbc, result);
-	    }
-
-	    //
-	    // LIST COMMANDS
-	    //
-
-	    else if (cmd.equals("rpush")) {
-		String key = args[0];
-		String value = parseString(nbc, args[1]);
-
-		try {
-		    tardis.rpush(key, value);
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lpush")) {
-		String key = args[0];
-		String value = parseString(nbc, args[1]);
-
-		try {
-		    tardis.lpush(key, value);
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("llen")) {
-		String key = args[0];
-
-		try {
-		    int result = tardis.llen(key);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lrange")) {
-		String key = args[0];
-		int start = parseInteger(args[1]);
-		int end = parseInteger(args[2]);
-
-		try {
-		    List<String> values = tardis.lrange(key, start, end);
-		    printList(nbc, values);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("ltrim")) {
-		String key = args[0];
-		int start = parseInteger(args[1]);
-		int end = parseInteger(args[2]);
-
-		try {
-		    tardis.ltrim(key, start, end);
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lindex")) {
-		String key = args[0];
-		int index = parseInteger(args[1]);
-
-		try {
-		    String result = tardis.lindex(key, index);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lset")) {
-		String key = args[0];
-		int index = parseInteger(args[1]);
-		String value = parseString(nbc, args[2]);
-
-		try {
-		    tardis.lset(key, index, value);
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lrem")) {
-		String key = args[0];
-		int count = parseInteger(args[1]);
-		String value = parseString(nbc, args[2]);
-
-		try {
-		    int result = tardis.lrem(key, count, value);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("lpop")) {
-		String key = args[0];
-
-		try {
-		    String result = tardis.lpop(key);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("rpop")) {
-		String key = args[0];
-
-		try {
-		    String result = tardis.rpop(key);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("rpoplpush")) {
-		String src = args[0];
-		String dest = parseString(nbc, args[1]);
-
-		try {
-		    String result = tardis.rpoplpush(src, dest);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    //
-	    // SETS COMMANDS
-	    //
-
-	    else if (cmd.equals("sadd")) {
-	    	String key = args[0];
-	    	String member = parseString(nbc, args[1]);
-
-		try {
-		    boolean result = tardis.sadd(key, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("srem")) {
-	    	String key = args[0];
-	    	String member = parseString(nbc, args[1]);
-
-		try {
-		    boolean result = tardis.srem(key, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-            else if (cmd.equals("spop")) {
-	    	String key = args[0];
-
-		try {
-		    String result = tardis.spop(key);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("smove")) {
-	    	String src = args[0];
-	    	String dest = args[1];
-	    	String member = parseString(nbc, args[2]);
-
-		try {
-		    boolean result = tardis.smove(src, dest, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-            else if (cmd.equals("scard")) {
-	    	String key = args[0];
-
-		try {
-		    int result = tardis.scard(key);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sismember")) {
-	    	String key = args[0];
-	    	String member = parseString(nbc, args[1]);
-
-		try {
-		    boolean result = tardis.sismember(key, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("smembers")) {
-		try {
-		    List<String> values = tardis.sinter(args);
-		    printList(nbc, values);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("srandmember")) {
-	    	String key = args[0];
-
-		try {
-		    String result = tardis.srandmember(key);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sinter")) {
-		try {
-		    List<String> values = tardis.sinter(args);;
-		    printList(nbc, values);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sinterstore")) {
-		try {
-		    int result = tardis.sinterstore(args);;
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sunion")) {
-		try {
-		    List<String> values = tardis.sunion(args);;
-		    printList(nbc, values);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sunionstore")) {
-		try {
-		    int result = tardis.sunionstore(args);;
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sdiff")) {
-		try {
-		    List<String> values = tardis.sdiff(args);;
-		    printList(nbc, values);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("sdiffstore")) {
-		try {
-		    int result = tardis.sdiffstore(args);;
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    //
-	    // ZSETS COMMANDS
-	    //
-
-	    else if (cmd.equals("zadd")) {
-	    	String key = args[0];
-	    	String score = args[1];
-	    	String member = parseString(nbc, args[2]);
-
-		try {
-		    boolean result = tardis.zadd(key, score, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("zincrby")) {
-	    	String key = args[0];
-	    	String score = args[1];
-	    	String member = parseString(nbc, args[2]);
-
-		try {
-		    double result = tardis.zincrby(key, score, member);
-		    printDouble(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("zrem")) {
-	    	String key = args[0];
-	    	String member = parseString(nbc, args[1]);
-
-		try {
-		    boolean result = tardis.zrem(key, member);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("zrange")) {
-		try {
-		    String key = args[0];
-		    int start = parseInteger(args[1]);
-		    int end = parseInteger(args[2]);
-		    boolean withscores = (args.length > 3 
-			&& args[3].equalsIgnoreCase("WITHSCORES"));
-
-		    List<String> values = tardis.zrange(
-			key, start, end, false, withscores);
-
-		    printList(nbc, values);
-		} catch(ArrayIndexOutOfBoundsException e) {
-		    printError(nbc, "wrong number of arguments for '" 
-		        + args[0].toLowerCase() + "' command");
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("zrevrange")) {
-		try {
-		    String key = args[0];
-		    int start = parseInteger(args[1]);
-		    int end = parseInteger(args[2]);
-		    boolean withscores = (args.length > 3 
-			&& args[3].equalsIgnoreCase("WITHSCORES"));
-
-		    List<String> values = tardis.zrange(
-			key, start, end, true, withscores);
-		    printList(nbc, values);
-		} catch(ArrayIndexOutOfBoundsException e) {
-		    printError(nbc, "wrong number of arguments for '" 
-		        + args[0].toLowerCase() + "' command");
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("zrangebyscore")) {
-		try {
-	           String key = args[0];
-		   String min = args[1];
-		   String max = args[2];
-		   int offset = 0;
-		   int count = Integer.MAX_VALUE;
-
-		    for (int i=3; i < args.length; i++) {
-			String arg = args[i];
-
-			if ("LIMIT".equalsIgnoreCase(arg)) {
-			    offset = parseInteger(args[++i]);
-			    count = parseInteger(args[++i]);
-			} else
-        	            throw new UnsupportedOperationException(Tardis.SYNTAX);
-		    }
+			multi = false;
 		
-		    List<String> values = tardis.zrangebyscore(key, min, max, offset, count);
-		    printList(nbc, values);
-		} catch(ArrayIndexOutOfBoundsException e) {
-		    printError(nbc, Tardis.SYNTAX);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
+			printList(nbc, requests.size());
+			while (! requests.isEmpty()) {
+				Request r = requests.remove(0);
+				selected = r.run(selected, nbc);
+			}
+
 		}
 	    }
 
-	    else if (cmd.equals("zremrangebyscore")) {
-		String key = args[0];
-		String min = args[1];
-		String max = args[2];
+	    else if (multi) {
+		requests.add(new Request(cmd, args));
+		printStatus(nbc, "QUEUED");
+            }
 
-		try {
-		    int result = tardis.zremrangebyscore(key, min, max);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
+	    else {
+		Tardis tardis = Tardis.select(selected);
+		cmd.run(tardis, args, nbc);
 
-            else if (cmd.equals("zcard")) {
-	    	String key = args[0];
+		if (cmd instanceof SelectCommand)
+		    selected = ((SelectCommand)cmd).getSelected();
+            }
 
-		try {
-		    int result = tardis.zcard(key);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-            else if (cmd.equals("zscore")) {
-	    	String key = args[0];
-	    	String member = parseString(nbc, args[1]);
-
-		try {
-		    String result = tardis.zscore(key, member);
-		    printResult(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    //
-	    // SORT
-	    //
-
-	    else if (cmd.equals("sort")) {
-	        String key = null;
-		boolean asc = true;
-		boolean alpha = false;
-		String pattern_by = null;
-		List<String> pattern_get = new ArrayList<String>();
-		int start = 0;
-		int count = Integer.MAX_VALUE;
-		String store = null;
-
-		try {
-		    for (int i=0; i < args.length; i++) {
-			String arg = args[i];
-
-			if (i == 0)
-			    key = arg;
-			else if ("ASC".equalsIgnoreCase(arg))
-			    asc = true;
-			else if ("DESC".equalsIgnoreCase(arg))
-			    asc = false;
-			else if ("ALPHA".equalsIgnoreCase(arg))
-			    alpha = true;
-			else if ("BY".equalsIgnoreCase(arg))
-			    pattern_by = args[++i];
-			else if ("GET".equalsIgnoreCase(arg))
-			    pattern_get.add(args[++i]);
-			else if ("STORE".equalsIgnoreCase(arg))
-                            store = args[++i];
-			else if ("LIMIT".equalsIgnoreCase(arg)) {
-			    start = parseInteger(args[++i]);
-			    count = parseInteger(args[++i]);
-			} else
-        	            throw new UnsupportedOperationException(Tardis.SYNTAX);
-		    }
-
-		    List<String> values = tardis.sort(key, asc, alpha, start, count, pattern_by, pattern_get, store);
-		    printList(nbc, values);
-		} catch(ArrayIndexOutOfBoundsException e) {
-		    printError(nbc, Tardis.SYNTAX);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    //
-	    // MULTIPLE DB COMMANDS
-	    //
-	    
-	    else if (cmd.equals("select")) {
-		int index = parseInteger(args[0]);
-
-		try {
-		    Tardis.select(index);
-		    selected = index;
-		    printStatus(nbc);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("move")) {
-		String key = args[0];
-		int index = parseInteger(args[1]);
-
-		try {
-		    boolean result = tardis.move(key, index);
-		    printInteger(nbc, result);
-		} catch(Exception e) {
-		    printError(nbc, e.getMessage());
-		}
-	    }
-
-	    else if (cmd.equals("flushdb")) {
-	        tardis.flushdb();
-		printStatus(nbc);
-	    }
-
-	    else if (cmd.equals("flushall")) {
-	        Tardis.flushall();
-		printStatus(nbc);
-	    }
-
-	    else if (cmd.equals("info")) {
-		printResult(nbc, "version:"
-			+ Tardis.V_MAJOR
-			+ "."
-			+ Tardis.V_MINOR);
-	    }
-
-	    else if (cmd.equals("debug")) {
-		cmd = args[0];
-		if (cmd.equalsIgnoreCase("RELOAD")) {
-		    try {
-		    	Tardis.save(tardisFile);
-	        	Tardis.flushall();
-			Tardis.load(tardisFile);
-
-		        printStatus(nbc);
-		    } catch(Exception e) {
-		        printError(nbc, e.getMessage());
-		    }
-		}
-
-		else
-		    printStatus(nbc);
-	    }
-
+if (DEBUG) System.out.println("normal termination");
 	    nbc.removeReadMark();
 	} catch(UnsupportedOperationException e1) {
+if (DEBUG) System.out.println("unsupported operation");
 	    printError(nbc, e1.getMessage());
 	} catch(BufferUnderflowException e2) {
+if (DEBUG) System.out.println("underflow");
 	    nbc.resetToReadMark();
 	} catch(ClosedChannelException e3) {
 	    System.out.println("connection closed");
@@ -1014,7 +1380,7 @@ public class SocketServer implements IConnectionScoped,
 	return true;
     }
 
-    public int parseInteger(String v)
+    public static int parseInteger(String v)
     {
 	try {
 	    return Integer.parseInt(v);
@@ -1023,7 +1389,7 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
-    public long parseLong(String v)
+    public static long parseLong(String v)
     {
 	try {
 	    return Long.parseLong(v);
@@ -1032,7 +1398,7 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
-    public String parseString(INonBlockingConnection nbc, String v)
+    public static String parseString(INonBlockingConnection nbc, String v)
 	  throws IOException, BufferUnderflowException
     {
 	long len = parseInteger(v);
@@ -1047,7 +1413,7 @@ public class SocketServer implements IConnectionScoped,
 	return new String(result);
     }
 
-    public List<String> parseList(INonBlockingConnection nbc, String v)
+    public static List<String> parseList(INonBlockingConnection nbc, String v)
 	  throws IOException, BufferUnderflowException
     {
 	long n = parseInteger(v.substring(1));
@@ -1069,7 +1435,7 @@ public class SocketServer implements IConnectionScoped,
     }
 
     public static void printResult(INonBlockingConnection nbc, Object result) 
-	    throws IOException
+	throws IOException
     {
 	if (result == null)
 	    nbc.write("$-1" + EOL);
@@ -1084,55 +1450,62 @@ public class SocketServer implements IConnectionScoped,
     }
 
     public static void printEmpty(INonBlockingConnection nbc)
-	    throws IOException
+	throws IOException
     {
 	nbc.write(EOL);
     }
 
     public static void printStatus(INonBlockingConnection nbc)
-	    throws IOException
+	throws IOException
     {
 	printStatus(nbc, "OK");
     }
 
     public static void printStatus(INonBlockingConnection nbc, String status)
-	    throws IOException
+	throws IOException
     {
 	nbc.write("+" + status + EOL);
     }
 
     public static void printError(INonBlockingConnection nbc, String error)
-	    throws IOException
+	throws IOException
     {
         System.out.println("error: " + error);
 	nbc.write("-ERR " + error + EOL);
     }
 
     public static void printDouble(INonBlockingConnection nbc, double value)
-	    throws IOException
+	throws IOException
     {
 	BigDecimal bd = (new BigDecimal(value)).round(MathContext.DECIMAL64);
 	nbc.write(":" + bd.toString() + EOL);
     }
 
     public static void printInteger(INonBlockingConnection nbc, boolean value)
-	    throws IOException
+	throws IOException
     {
 	printInteger(nbc, value ? 1 : 0);
     }
 
     public static void printInteger(INonBlockingConnection nbc, long value)
-	    throws IOException
+	throws IOException
     {
 	nbc.write(":" + value + EOL);
     }
 
-    public static void printList(INonBlockingConnection nbc, List<?> values)
-	    throws IOException
+	// this only writes the list header (number of elements in the list)
+    public static void printList(INonBlockingConnection nbc, int n)
+	throws IOException
     {
-        if (values == null) {
+	nbc.write("*" + n + EOL);
+    }
+
+    public static void printList(INonBlockingConnection nbc, List<?> values)
+	throws IOException
+    {
+	if (values == null) {
 	    nbc.write("*-1" + EOL);
-        } else {
+	} else {
 	    int size = values.size();
 	    nbc.write("*" + size + EOL);
 
