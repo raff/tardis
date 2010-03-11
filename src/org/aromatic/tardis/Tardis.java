@@ -116,6 +116,22 @@ class Tardis implements Serializable
         return true;
     }
 
+    public synchronized int append(String key, String value)
+    {
+	checkExpiry(key, true);
+
+	StringBuilder sb = new StringBuilder();
+
+        Object v = repository.get(key);
+	if (v instanceof String)
+	    sb.append((String)v);
+	else if (v != null)
+            throw new UnsupportedOperationException(WRONGTYPE);
+
+	sb.append(value);
+	repository.put(key, sb.toString());
+        return sb.length();
+    }
 
     public synchronized void mset(String keyValues[]) {
         for (int i=0; i < keyValues.length-1; i += 2)

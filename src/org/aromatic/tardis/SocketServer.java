@@ -207,6 +207,19 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
+    private static class AppendCommand extends Command {
+	AppendCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String value = args[1];
+
+	    int result = tardis.append(key, value);
+	    printInteger(nbc, result);
+	}
+    }
+
+
     private static class IncrCommand extends Command {
 	IncrCommand() { nArgs = 1; }
 
@@ -1155,6 +1168,7 @@ public class SocketServer implements IConnectionScoped,
     	commands.put("setnx",       new SetnxCommand());
     	commands.put("mset",        new MsetCommand());
     	commands.put("msetnx",      new MsetnxCommand());
+    	commands.put("append",      new AppendCommand());
     	commands.put("incr",        new IncrCommand());
     	commands.put("incrby",      new IncrbyCommand());
     	commands.put("decr",        new DecrCommand());
