@@ -362,18 +362,20 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
         return (ArrayList<String>) v;
     }
 
-    public synchronized void rpush(String key, String value)
+    public synchronized int rpush(String key, String value)
     {
 	checkExpiry(key, true);
         ArrayList<String> list = getList(key, true);
         list.add(value);
+	return list.size();
     }
     
-    public synchronized void lpush(String key, String value)
+    public synchronized int lpush(String key, String value)
     {
 	checkExpiry(key, true);
         ArrayList<String> list = getList(key, true);
         list.add(0, value);
+	return list.size();
     }
     
     public synchronized int llen(String key)

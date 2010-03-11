@@ -415,8 +415,8 @@ public class SocketServer implements IConnectionScoped,
 	    String value = args[1];
 
 	    try {
-		tardis.rpush(key, value);
-		printStatus(nbc);
+		int result = tardis.rpush(key, value);
+		printInteger(nbc, result);
 	    } catch(Exception e) {
 		printError(nbc, e.getMessage());
 	    }
@@ -431,8 +431,8 @@ public class SocketServer implements IConnectionScoped,
 	    String value = args[1];
 
 	    try {
-		tardis.lpush(key, value);
-		printStatus(nbc);
+		int result = tardis.lpush(key, value);
+		printInteger(nbc, result);
 	    } catch(Exception e) {
 		printError(nbc, e.getMessage());
 	    }
