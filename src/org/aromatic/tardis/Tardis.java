@@ -934,6 +934,26 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
         return set.getScore(member);
     }
 
+    public synchronized int zrank(String key, String member)
+    {
+	checkExpiry(key);
+        ZSet set = getZSet(key, false);
+        if (set == null)
+            return -1;
+
+        return set.getRank(member, true);
+    }
+
+    public synchronized int zrevrank(String key, String member)
+    {
+	checkExpiry(key);
+        ZSet set = getZSet(key, false);
+        if (set == null)
+            return -1;
+
+        return set.getRank(member, false);
+    }
+
     //
     // SORT
     //
@@ -1331,6 +1351,17 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	public synchronized String getScore(String member) {
 	    ScoreObject so = members.get(member);
 	    return so != null ? so.score : null;
+	}
+
+	public synchronized int getRank(String member, boolean fwd) {
+	    ScoreObject so = members.get(member);
+	    if (so == null)
+	        return -1;
+
+	    if (fwd)
+		    return scores.headSet(so).size();
+	    else
+		    return scores.tailSet(so).size()-1;
 	}
 
 	public synchronized Collection<String> members() {

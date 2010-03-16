@@ -982,6 +982,38 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
+    private static class ZrankCommand extends Command {
+	ZrankCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		int result = tardis.zrank(key, member);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZrevrankCommand extends Command {
+	ZrevrankCommand() { nArgs = 2; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String member = args[1];
+
+	    try {
+		int result = tardis.zrevrank(key, member);
+		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
     //
     // SORT
     //
@@ -1222,6 +1254,8 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("zrangebyscore",    new ZrangebyscoreCommand());
 	commands.put("zcard",       new ZcardCommand());
 	commands.put("zscore",      new ZscoreCommand());
+	commands.put("zrank",       new ZrankCommand());
+	commands.put("zrevrank",    new ZrevrankCommand());
 
 	commands.put("sort",        new SortCommand());
 
