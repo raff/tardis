@@ -913,6 +913,7 @@ public class SocketServer implements IConnectionScoped,
 	       String max = args[2];
 	       int offset = 0;
 	       int count = Integer.MAX_VALUE;
+	       boolean withscores = false;
 
 		for (int i=3; i < args.length; i++) {
 		    String arg = args[i];
@@ -920,11 +921,13 @@ public class SocketServer implements IConnectionScoped,
 		    if ("LIMIT".equalsIgnoreCase(arg)) {
 			offset = parseInteger(args[++i]);
 			count = parseInteger(args[++i]);
+		    } else if ("WITHSCORES".equalsIgnoreCase(arg)) {
+			withscores = true;
 		    } else
 			throw new UnsupportedOperationException(Tardis.SYNTAX);
 		}
 	    
-		List<String> values = tardis.zrangebyscore(key, min, max, offset, count);
+		List<String> values = tardis.zrangebyscore(key, min, max, offset, count, withscores);
 		printList(nbc, values);
 	    } catch(ArrayIndexOutOfBoundsException e) {
 		printError(nbc, Tardis.SYNTAX);
@@ -1008,6 +1011,24 @@ public class SocketServer implements IConnectionScoped,
 	    try {
 		int result = tardis.zrevrank(key, member);
 		printResult(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class ZcountCommand extends Command {
+	ZcountCommand() { nArgs = 3; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    try {
+		String key = args[0];
+		int start = parseInteger(args[1]);
+		int end = parseInteger(args[2]);
+
+		int result = tardis.zcount(key, start, end);
+
+		printInteger(nbc, result);
 	    } catch(Exception e) {
 		printError(nbc, e.getMessage());
 	    }
@@ -1256,6 +1277,7 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("zscore",      new ZscoreCommand());
 	commands.put("zrank",       new ZrankCommand());
 	commands.put("zrevrank",    new ZrevrankCommand());
+	commands.put("zcount",      new ZcountCommand());
 
 	commands.put("sort",        new SortCommand());
 

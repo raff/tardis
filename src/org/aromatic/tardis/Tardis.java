@@ -893,14 +893,14 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	return set.range(start, end, reverse, withscores);
     }
 
-    public synchronized List<String> zrangebyscore(String key, String min, String max, int offset, int end)
+    public synchronized List<String> zrangebyscore(String key, String min, String max, int offset, int end, boolean withscores)
     {
 	checkExpiry(key);
         ZSet set = getZSet(key, false);
         if (set == null)
             return EMPTYLIST;
 
-	return set.rangebyscore(min, max, offset, end);
+	return set.rangebyscore(min, max, offset, end, withscores);
     }
 
     public synchronized int zremrangebyscore(String key, String min, String max)
@@ -952,6 +952,36 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
             return -1;
 
         return set.getRank(member, false);
+    }
+
+    public synchronized int zcount(String key, int start, int end)
+    {
+	checkExpiry(key);
+        ZSet set = getZSet(key, false);
+        if (set == null)
+            return 0;
+
+        int size = set.size();
+
+        if (start < 0) {
+            start += size;
+            if (start < 0)
+                start = 0;
+        }
+
+        if (end < 0) {
+            end += size;
+            if (end < 0)
+                end = 0;
+        }
+
+	if (start > end)
+	    return 0;
+
+        if (end >= size)
+            end = size-1;
+
+	return set.range(start, end, false, false).size();
     }
 
     //
@@ -1291,7 +1321,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	    return list;
 	}
 
-	public synchronized List<String> rangebyscore(String min, String max, int offset, int count) {
+	public synchronized List<String> rangebyscore(String min, String max, int offset, int count, boolean withscores) {
 	    ArrayList<String> list = new ArrayList<String>();
 	    if (scores.isEmpty())
 		return list;
@@ -1313,6 +1343,9 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 			continue;
 
 		list.add(so.value);
+
+		if (withscores)
+		    list.add(so.score);
 	    }
 
 	    return list;
