@@ -938,7 +938,7 @@ public class SocketServer implements IConnectionScoped,
     }
 
     private static class ZremrangebyscoreCommand extends Command {
-	ZremrangebyscoreCommand() { nArgs = VARARGS; }
+	ZremrangebyscoreCommand() { nArgs = 3; }
 
 	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
 	    String key = args[0];
@@ -947,6 +947,23 @@ public class SocketServer implements IConnectionScoped,
 
 	    try {
 		int result = tardis.zremrangebyscore(key, min, max);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class Zremrangebyrank extends Command {
+	Zremrangebyrank() { nArgs = 3; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    int start = parseInteger(args[1]);
+	    int end = parseInteger(args[2]);
+
+	    try {
+		int result = tardis.zremrangebyrank(key, start, end);
 		printInteger(nbc, result);
 	    } catch(Exception e) {
 		printError(nbc, e.getMessage());
@@ -1267,16 +1284,17 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("sdiffstore",  new SdiffstoreCommand());
 
 	commands.put("zadd",        new ZaddCommand());
-	commands.put("zincrby",     new ZincrbyCommand());
 	commands.put("zrem",        new ZremCommand());
-	commands.put("zrange",      new ZrangeCommand());
-	commands.put("zrevrange",   new ZrevrangeCommand());
-	commands.put("zremrangebyscore", new ZremrangebyscoreCommand());
-	commands.put("zrangebyscore",    new ZrangebyscoreCommand());
-	commands.put("zcard",       new ZcardCommand());
-	commands.put("zscore",      new ZscoreCommand());
+	commands.put("zincrby",     new ZincrbyCommand());
 	commands.put("zrank",       new ZrankCommand());
 	commands.put("zrevrank",    new ZrevrankCommand());
+	commands.put("zrange",      new ZrangeCommand());
+	commands.put("zrevrange",   new ZrevrangeCommand());
+	commands.put("zrangebyscore",    new ZrangebyscoreCommand());
+	commands.put("zremrangebyrank",  new Zremrangebyrank());
+	commands.put("zremrangebyscore", new ZremrangebyscoreCommand());
+	commands.put("zcard",       new ZcardCommand());
+	commands.put("zscore",      new ZscoreCommand());
 	commands.put("zcount",      new ZcountCommand());
 
 	commands.put("sort",        new SortCommand());

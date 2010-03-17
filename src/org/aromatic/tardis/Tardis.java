@@ -913,6 +913,35 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	return set.remrangebyscore(min, max);
     }
 
+    public synchronized int zremrangebyrank(String key, int start, int end)
+    {
+	checkExpiry(key, true);
+        ZSet set = getZSet(key, false);
+        if (set == null)
+            return 0;
+
+        int size = set.size();
+
+        if (start < 0) {
+            start += size;
+            if (start < 0)
+                start = 0;
+        }
+
+        if (end < 0) {
+            end += size;
+            if (end < 0)
+                end = 0;
+        }
+
+	if (start > end)
+	    return 0;
+
+        if (end >= size)
+            end = size-1;
+
+	return set.remrangebyrank(start, end);
+    }
 
     public synchronized int zcard(String key)
     {
@@ -1365,6 +1394,35 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 		iter.remove();
 		members.remove(so.value);
 		count++;
+	    }
+
+	    return count;
+	}
+
+	public synchronized int remrangebyrank(int start, int end) {
+	    if (scores.isEmpty())
+		return 0;
+
+	    Iterator<ScoreObject> iter = scores.iterator();
+	    int i = 0;
+	    int count = 0;
+
+		// could be optimized a little
+		// if the range is closer to the set's tail
+		// by using a descendingIterator and reverting start&end
+	    while (iter.hasNext()) {
+		ScoreObject so = iter.next();
+
+		if (i >= start) {
+		  iter.remove();
+		  members.remove(so.value);
+		  count++;
+		}
+
+		i++;
+
+		if (i > end)
+		  break;
 	    }
 
 	    return count;
