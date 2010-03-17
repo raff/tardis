@@ -1023,10 +1023,10 @@ public class SocketServer implements IConnectionScoped,
 	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
 	    try {
 		String key = args[0];
-		int start = parseInteger(args[1]);
-		int end = parseInteger(args[2]);
+		String min = args[1];
+		String max = args[2];
 
-		int result = tardis.zcount(key, start, end);
+		int result = tardis.zcount(key, min, max);
 
 		printInteger(nbc, result);
 	    } catch(Exception e) {

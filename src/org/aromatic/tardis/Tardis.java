@@ -954,34 +954,14 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
         return set.getRank(member, false);
     }
 
-    public synchronized int zcount(String key, int start, int end)
+    public synchronized int zcount(String key, String min, String max)
     {
 	checkExpiry(key);
         ZSet set = getZSet(key, false);
         if (set == null)
             return 0;
 
-        int size = set.size();
-
-        if (start < 0) {
-            start += size;
-            if (start < 0)
-                start = 0;
-        }
-
-        if (end < 0) {
-            end += size;
-            if (end < 0)
-                end = 0;
-        }
-
-	if (start > end)
-	    return 0;
-
-        if (end >= size)
-            end = size-1;
-
-	return set.range(start, end, false, false).size();
+	return set.rangebyscore(min, max, 0, Integer.MAX_VALUE, false).size();
     }
 
     //
@@ -1321,16 +1301,29 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	    return list;
 	}
 
+	private static String S_MAX = 
+		(new Character(Character.MAX_VALUE)).toString();
+
 	public synchronized List<String> rangebyscore(String min, String max, int offset, int count, boolean withscores) {
 	    ArrayList<String> list = new ArrayList<String>();
 	    if (scores.isEmpty())
 		return list;
 
-	    ScoreObject from = scores.ceiling(new ScoreObject(min, ""));
+	    ScoreObject from;
+	    boolean higher = false;
+
+	    if (min.startsWith("(")) // open
+	        from = scores.higher(new ScoreObject(min.substring(1), S_MAX));
+            else
+	        from = scores.ceiling(new ScoreObject(min, ""));
 	    if (from == null)
 		return list;
 
-	    ScoreObject to = scores.higher(new ScoreObject(max + "\0", null));
+	    ScoreObject to;
+	    if (max.startsWith("(")) // open
+		to = scores.higher(new ScoreObject(max.substring(1), ""));
+	    else
+		to = scores.higher(new ScoreObject(max + "\0", null));
 
 	    SortedSet subset = to != null 
 		? scores.subSet(from, to) : scores.tailSet(from);
