@@ -1309,6 +1309,7 @@ public class SocketServer implements IConnectionScoped,
 
 	commands.put("multi",	    new NopCommand()); // executed inline
 	commands.put("exec",	    new NopCommand()); // executed inline
+	commands.put("discard",	    new NopCommand()); // executed inline
 
 	if (tardisFile.exists()) {
 	    System.out.println("loading data from " + tardisFile);
@@ -1435,6 +1436,16 @@ public class SocketServer implements IConnectionScoped,
 				selected = r.run(selected, nbc);
 			}
 
+		}
+	    }
+
+	    else if (cmdname.equals("discard")) {
+		if (!multi)
+			printError(nbc, "DISCARD without MULTI");
+		else {
+			multi = false;
+			requests.clear();
+			printStatus(nbc);
 		}
 	    }
 
