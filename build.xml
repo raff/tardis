@@ -35,6 +35,7 @@
 	    fork="true" failonerror="true"> 
 	    <jvmarg value="-Xms1g"/>
 	    <jvmarg value="-Xmx1g"/>
+	    <arg value="--password=foobared"/>
 	    <classpath>
 		<pathelement location="${jar.file}"/>
 		<fileset dir="${lib.dir}">
@@ -50,6 +51,7 @@
 	    <jvmarg value="-Xms1g"/>
 	    <jvmarg value="-Xmx1g"/>
 	    <arg value="--debug"/>
+	    <arg value="--password=foobared"/>
 	    <classpath>
 		<pathelement location="${jar.file}"/>
 		<fileset dir="${lib.dir}">

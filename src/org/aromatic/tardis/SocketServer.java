@@ -13,6 +13,8 @@ public class SocketServer implements IConnectionScoped,
 {
     protected static boolean DEBUG = false;
 
+    protected static String password = null;
+
     protected static final String EOL = "\r\n";
     protected static File tardisFile = new File("tardis.db");
     protected static IServer srv = null;
@@ -26,6 +28,7 @@ public class SocketServer implements IConnectionScoped,
 
     protected int selected;
     protected boolean multi = false;
+    protected boolean authenticated = false;
     protected List<Request> requests = new ArrayList<Request>();
 
     @Override
@@ -113,8 +116,12 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
+    private static class AuthCommand extends Command {
+	AuthCommand() { nArgs = 1; }
+    }
+
     private static class SetCommand extends Command {
-	SetCommand() { nArgs = 2; stringArg = true; }
+	SetCommand() { nArgs = 2; } //stringArg = true; }
 
 	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
 	    String key = args[0];
@@ -1219,8 +1226,24 @@ public class SocketServer implements IConnectionScoped,
 
     public static void main(String[] args)
     {
-	if (args.length > 0)
-		DEBUG = true;
+	for (String arg : args) {
+		if (arg.equals("--debug"))
+			DEBUG = true;
+
+		else if (arg.startsWith("--password="))
+			password = arg.substring(11);
+
+		else {
+			System.out.println("invalid argument: " + arg);
+			System.exit(1);
+		}
+	}
+
+	if (DEBUG)
+		System.out.println("DEBUG enabled");
+
+	if (password != null)
+		System.out.println("AUTHENTICATION required");
 
 	commands.put("",	    new NopCommand());
     	commands.put("ping",        new PingCommand());
@@ -1230,6 +1253,7 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("bgsave",      new SaveCommand(1));
 	commands.put("bgrewriteaof",new SaveCommand(2));
 	commands.put("lastsave",    new LastSaveCommand());
+	commands.put("auth",        new AuthCommand());
 
     	commands.put("set",         new SetCommand());
     	commands.put("get",         new GetCommand());
@@ -1327,7 +1351,7 @@ public class SocketServer implements IConnectionScoped,
 	    System.out.println("saving data to " + tardisFile);
 	    Tardis.save(tardisFile);
         } catch(Exception ex) {
-            System.out.println(ex);
+            System.out.println("exception " + ex);
         }
     }
 
@@ -1393,6 +1417,10 @@ public class SocketServer implements IConnectionScoped,
 	            args = new String[0];
 	    }
 
+	    if (DEBUG) {
+		System.out.println("     " + cmdname + " " + args);
+	    }
+
 	    Command cmd = commands.get(cmdname);
 	    if (cmd != null) {
 		if (cmd.stringArg) {
@@ -1417,6 +1445,23 @@ public class SocketServer implements IConnectionScoped,
 
 		printError(nbc, "wrong number of arguments for '" 
 		    + cmdname + "' command");
+	    }
+
+	    else if (password != null && !authenticated && !cmdname.equals("auth")) {
+System.out.println("password: " + password);
+System.out.println("authenticated: " + authenticated);
+System.out.println("cmdname: " + cmdname);
+		printError(nbc, "operation not permitted");
+	    }
+
+	    else if (cmdname.equals("auth")) {
+		if (password == null || password.equals(args[0])) {
+		    authenticated = true;
+		    printStatus(nbc);
+		} else {
+		    authenticated = false;
+		    printError(nbc, "invalid password");
+		}
 	    }
 
 	    else if (cmdname.equals("multi")) {
