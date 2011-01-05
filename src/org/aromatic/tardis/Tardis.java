@@ -223,6 +223,8 @@ class Tardis implements Serializable
             return "set";
         if (v instanceof ZSet)
             return "zset";
+	if (v instanceof Map)
+	    return "hash";
 
         return "unknown";
     }
@@ -991,6 +993,102 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
             return 0;
 
 	return set.rangebyscore(min, max, 0, Integer.MAX_VALUE, false).size();
+    }
+
+    //
+    // COMMANDS OPERATING ON HASHES
+    //
+
+    private Map<String, String> getHash(String key, boolean create)
+    {
+        Object v = repository.get(key);
+        if (v == null) {
+            if (create) {
+                v = (Object) new HashMap<String, String>();
+                repository.put(key, v);
+            }
+        } else if (! (v instanceof Map))
+            throw new UnsupportedOperationException(WRONGTYPE);
+
+        return (Map<String, String>) v;
+    }
+
+    public synchronized boolean hset(String key, String field, String value)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, true);
+
+	return hash.put(field, value) == null;
+    }
+
+    public synchronized boolean hsetnx(String key, String field, String value)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, true);
+
+	if (hash.containsKey(field))
+	    return false;
+
+	return hash.put(field, value) == null;
+    }
+
+    public synchronized long hincrby(String key, String field, long n)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, true);
+	long v = 0;
+
+        String value = hash.get(field);
+        if (value != null)
+            v = getInteger(value);
+	
+        v += n;
+        hash.put(key, Long.toString(v));
+        return v;
+    }
+
+    public synchronized boolean hdel(String key, String field)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	if (hash == null)
+		return false;
+
+	return hash.remove(field) != null;
+    }
+
+    public synchronized String hget(String key, String field)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	if (hash == null)
+		return null;
+
+	return hash.get(field);
+    }
+
+    public synchronized boolean hexists(String key, String field)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	if (hash == null)
+		return false;
+
+	return hash.containsKey(field);
+    }
+
+    public synchronized int hlen(String key)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	if (hash == null)
+		return 0;
+
+	return hash.size();
     }
 
     //
