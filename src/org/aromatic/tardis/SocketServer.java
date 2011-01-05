@@ -1226,10 +1226,15 @@ public class SocketServer implements IConnectionScoped,
 
     public static void main(String[] args)
     {
+	boolean commandList = false;
+
 	for (String arg : args) {
 		if (arg.equals("--debug"))
 			DEBUG = true;
 
+		else if (arg.equals("--list"))
+			commandList= true;
+		
 		else if (arg.startsWith("--password="))
 			password = arg.substring(11);
 
@@ -1334,6 +1339,18 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("multi",	    new NopCommand()); // executed inline
 	commands.put("exec",	    new NopCommand()); // executed inline
 	commands.put("discard",	    new NopCommand()); // executed inline
+
+	if (commandList) {
+		System.out.println("Implemented commands:\n");
+
+		Object names[] = commands.keySet().toArray();
+		Arrays.sort(names);
+
+		for (Object name : names)
+			System.out.println(name);
+
+		return;
+	}
 
 	if (tardisFile.exists()) {
 	    System.out.println("loading data from " + tardisFile);

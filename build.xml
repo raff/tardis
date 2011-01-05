@@ -61,4 +61,19 @@
         </java>
     </target>
 
+    <target name="list">
+	<java classname="org.aromatic.tardis.SocketServer"
+	    fork="true" failonerror="true"> 
+	    <jvmarg value="-Xms1g"/>
+	    <jvmarg value="-Xmx1g"/>
+	    <arg value="--list"/>
+	    <classpath>
+		<pathelement location="${jar.file}"/>
+		<fileset dir="${lib.dir}">
+		    <include name="**/*.jar"/>
+		</fileset>
+	    </classpath>
+        </java>
+    </target>
+
 </project>
