@@ -112,7 +112,7 @@ class Tardis implements Serializable
         if (repository.containsKey(key))
             return false;
 
-        repository.put(key, (Object)value);
+        repository.put(key, value);
         return true;
     }
 
@@ -1440,7 +1440,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	public ZSet()
 	{
 	    members = new HashMap<String, ScoreObject>();
-	    scores = new TreeSet(new ZComparator());
+	    scores = new TreeSet<ScoreObject>(new ZComparator());
 	}
 
 	public synchronized double add(String score, String member, boolean incrby)
@@ -1528,7 +1528,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	    else
 		to = scores.higher(new ScoreObject(max + "\0", null));
 
-	    SortedSet subset = to != null 
+	    SortedSet<ScoreObject> subset = to != null 
 		? scores.subSet(from, to) : scores.tailSet(from);
 
 	    Iterator<ScoreObject> iter = subset.iterator();
@@ -1557,7 +1557,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 
 	    ScoreObject to = scores.higher(new ScoreObject(max + "\0", null));
 
-	    SortedSet subset = to != null 
+	    SortedSet<ScoreObject> subset = to != null 
 		? scores.subSet(from, to) : scores.tailSet(from);
 
 	    Iterator<ScoreObject> iter = subset.iterator();
