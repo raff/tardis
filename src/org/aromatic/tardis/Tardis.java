@@ -1091,6 +1091,82 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	return hash.size();
     }
 
+    public synchronized List<String> hgetall(String key)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	ArrayList<String> result = new ArrayList<String>();
+
+	if (hash == null)
+		return result;
+
+	for (Map.Entry<String, String> e : hash.entrySet()) {
+		result.add(e.getKey());
+		result.add(e.getValue());
+	}
+
+	return result;
+    }
+
+    public synchronized List<String> hkeys(String key)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	ArrayList<String> result = new ArrayList<String>();
+
+	if (hash == null)
+		return result;
+
+	result.addAll(hash.keySet());
+	return result;
+    }
+
+    public synchronized List<String> hvals(String key)
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	ArrayList<String> result = new ArrayList<String>();
+
+	if (hash == null)
+		return result;
+
+	result.addAll(hash.values());
+	return result;
+    }
+
+    public synchronized List<String> hmget(String key, String fields[])
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	ArrayList<String> result = new ArrayList<String>();
+
+	if (hash == null)
+		return result;
+
+	for (String f : fields)
+		result.add(hash.get(f));
+
+	return result;
+    }
+
+    public synchronized void hmset(String key, String fieldValues[])
+    {
+	checkExpiry(key, true);
+	Map<String, String> hash = getHash(key, false);
+
+	ArrayList<String> result = new ArrayList<String>();
+
+	if (hash == null)
+		return;
+
+        for (int i=0; i < fieldValues.length-1; i += 2)
+		hash.put(fieldValues[i], fieldValues[i+1]);
+    }
+
     //
     // SORT
     //
