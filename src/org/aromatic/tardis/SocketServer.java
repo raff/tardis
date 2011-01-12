@@ -1112,6 +1112,124 @@ public class SocketServer implements IConnectionScoped,
     }
 
     //
+    // HASH COMMANDS
+    //
+
+    private static class HsetCommand extends Command {
+	HsetCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+	    String value = args[2];
+
+	    try {
+		boolean result = tardis.hset(key, field, value);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HgetCommand extends Command {
+	HgetCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+
+	    try {
+		String value = tardis.hget(key,field);
+		printResult(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HdelCommand extends Command {
+	HdelCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+
+	    try {
+		boolean result = tardis.hdel(key,field);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HexistsCommand extends Command {
+	HexistsCommand() { nArgs = 2; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+
+	    try {
+		boolean result = tardis.hexists(key,field);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HincrbyCommand extends Command {
+	HincrbyCommand() { nArgs = 3; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+	    long step = parseLong(args[2]);
+
+	    try {
+		long value = tardis.hincrby(key, field, step);
+		printInteger(nbc, value);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HsetnxCommand extends Command {
+	HsetnxCommand() { nArgs = 3; stringArg = true; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    String field = args[1];
+	    String value = args[2];
+
+	    try {
+		boolean result = tardis.hsetnx(key, field, value);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    private static class HlenCommand extends Command {
+	HlenCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+
+	    try {
+		long result = tardis.hlen(key);
+		printInteger(nbc, result);
+	    } catch(Exception e) {
+		printError(nbc, e.getMessage());
+	    }
+	}
+    }
+
+    //
     // MULTIPLE DB COMMANDS
     //
     
@@ -1328,6 +1446,14 @@ public class SocketServer implements IConnectionScoped,
 
 	commands.put("sort",        new SortCommand());
 
+	commands.put("hdel",        new HdelCommand());
+	commands.put("hexists",     new HexistsCommand());
+	commands.put("hget",        new HgetCommand());
+	commands.put("hincrby",     new HincrbyCommand());
+	commands.put("hlen",        new HlenCommand());
+	commands.put("hset",        new HsetCommand());
+	commands.put("hsetnx",      new HsetnxCommand());
+
 	commands.put("select",      new SelectCommand());
 	commands.put("move",        new MoveCommand());
 	commands.put("flushdb",     new FlushdbCommand());
@@ -1527,10 +1653,15 @@ System.out.println("cmdname: " + cmdname);
 if (DEBUG) System.out.println("normal termination");
 	    nbc.removeReadMark();
 	} catch(UnsupportedOperationException e1) {
-if (DEBUG) System.out.println("unsupported operation");
+if (DEBUG) { 
+	System.out.println("unsupported operation");
+}
 	    printError(nbc, e1.getMessage());
 	} catch(BufferUnderflowException e2) {
-if (DEBUG) System.out.println("underflow");
+if (DEBUG) { 
+	System.out.println("underflow ");
+	e2.printStackTrace();
+}
 	    nbc.resetToReadMark();
 	} catch(ClosedChannelException e3) {
 	    System.out.println("connection closed");
@@ -1567,11 +1698,11 @@ if (DEBUG) System.out.println("underflow");
 	    throw new UnsupportedOperationException("invalid bulk write count");
 
 	byte result[] = nbc.readBytesByLength((int)len);
+	String sResult = new String(result);
 	
-//System.out.printf("received %d bytes, hashCode=%d\n", 
-//		result.length, Arrays.hashCode(result));
+System.out.printf("received %d bytes '%s'\n", result.length, sResult);
 	nbc.readBytesByLength(2);
-	return new String(result);
+	return sResult;
     }
 
     public static List<String> parseList(INonBlockingConnection nbc, String v)

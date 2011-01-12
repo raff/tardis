@@ -16,7 +16,7 @@
     </target>
 
     <target name="compile" depends="init">
-	<javac destdir="${build.dir}" target="1.5">
+	<javac destdir="${build.dir}" target="1.5" debug="true">
 	    <compilerarg value="-Xlint"/>
 	    <src path="${src.dir}" />
 	    <classpath>
