@@ -1043,7 +1043,7 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
             v = getInteger(value);
 	
         v += n;
-        hash.put(key, Long.toString(v));
+        hash.put(field, Long.toString(v));
         return v;
     }
 
@@ -1137,8 +1137,10 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	return result;
     }
 
-    public synchronized List<String> hmget(String key, String fields[])
+    public synchronized List<String> hmget(String keyFields[])
     {
+	String key = keyFields[0];
+
 	checkExpiry(key, true);
 	Map<String, String> hash = getHash(key, false);
 
@@ -1147,14 +1149,16 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	if (hash == null)
 		return result;
 
-	for (String f : fields)
-		result.add(hash.get(f));
+	for (int i=1; i < keyFields.length; i++)
+		result.add(hash.get(keyFields[i]));
 
 	return result;
     }
 
-    public synchronized void hmset(String key, String fieldValues[])
+    public synchronized void hmset(String keyFieldValues[])
     {
+	String key = keyFieldValues[0];
+
 	checkExpiry(key, true);
 	Map<String, String> hash = getHash(key, false);
 
@@ -1163,8 +1167,8 @@ System.out.println(key + " expired at " + (expire.longValue()/1000)
 	if (hash == null)
 		return;
 
-        for (int i=0; i < fieldValues.length-1; i += 2)
-		hash.put(fieldValues[i], fieldValues[i+1]);
+        for (int i=1; i < keyFieldValues.length-1; i += 2)
+		hash.put(keyFieldValues[i], keyFieldValues[i+1]);
     }
 
     //
