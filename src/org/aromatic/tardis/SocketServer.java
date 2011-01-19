@@ -1229,6 +1229,62 @@ public class SocketServer implements IConnectionScoped,
 	}
     }
 
+    private static class HgetallCommand extends Command {
+	HgetallCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    List<String> values = tardis.hgetall(key);
+	    printList(nbc, values);
+	}
+    }
+
+    private static class HkeysCommand extends Command {
+	HkeysCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    List<String> values = tardis.hkeys(key);
+	    printList(nbc, values);
+	}
+    }
+
+    private static class HvalsCommand extends Command {
+	HvalsCommand() { nArgs = 1; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    String key = args[0];
+	    List<String> values = tardis.hvals(key);
+	    printList(nbc, values);
+	}
+    }
+
+    private static class HmsetCommand extends Command {
+	HmsetCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    if (args.length < 3 || args.length % 2 != 1)
+	        printError(nbc, "wrong number of arguments");
+	    else {
+	        tardis.hmset(args);
+	        printStatus(nbc);
+	    }
+	}
+    }
+
+    private static class HmgetCommand extends Command {
+	HmgetCommand() { nArgs = VARARGS; }
+
+	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
+	    if (args.length < 2 || args.length % 2 != 0)
+	        printError(nbc, "wrong number of arguments");
+	    else {
+	        tardis.hmget(args);
+	        printStatus(nbc);
+	    }
+	}
+    }
+
     //
     // MULTIPLE DB COMMANDS
     //
@@ -1301,11 +1357,12 @@ public class SocketServer implements IConnectionScoped,
     }
 
     private static class DebugCommand extends Command {
-	DebugCommand() { nArgs = 1; }
+	DebugCommand() { nArgs = VARARGS; }
 
 	public void run(Tardis tardis, String args[], INonBlockingConnection nbc) throws IOException {
 	    String cmd = args[0];
-	    if (cmd.equalsIgnoreCase("RELOAD")) {
+	    int len = args.length;
+	    if (cmd.equalsIgnoreCase("RELOAD") && len==1) {
 		try {
 		    Tardis.save(tardisFile);
 		    Tardis.flushall();
@@ -1317,9 +1374,15 @@ public class SocketServer implements IConnectionScoped,
 		}
 	    }
 
-	    else
+	    if (cmd.equalsIgnoreCase("OBJECT") && len==2) {
 		printStatus(nbc);
-	}
+	    }
+
+	    else
+		printError(nbc,
+			"Syntax error, try DEBUG [SEGFAULT|OBJECT <key>"
+			+ "|SWAPIN <key>|SWAPOUT <key>|RELOAD]");
+        }
     }
 
     private static class Request {
@@ -1344,6 +1407,7 @@ public class SocketServer implements IConnectionScoped,
 
     public static void main(String[] args)
     {
+	int port = 6379;
 	boolean commandList = false;
 
 	for (String arg : args) {
@@ -1355,6 +1419,9 @@ public class SocketServer implements IConnectionScoped,
 		
 		else if (arg.startsWith("--password="))
 			password = arg.substring(11);
+
+		else if (arg.startsWith("--port="))
+			port = Integer.parseInt(arg.substring(7));
 
 		else {
 			System.out.println("invalid argument: " + arg);
@@ -1453,6 +1520,9 @@ public class SocketServer implements IConnectionScoped,
 	commands.put("hlen",        new HlenCommand());
 	commands.put("hset",        new HsetCommand());
 	commands.put("hsetnx",      new HsetnxCommand());
+	commands.put("hgetall",     new HgetallCommand());
+	commands.put("hkeys",       new HkeysCommand());
+	commands.put("hvals",       new HvalsCommand());
 
 	commands.put("select",      new SelectCommand());
 	commands.put("move",        new MoveCommand());
@@ -1488,7 +1558,8 @@ public class SocketServer implements IConnectionScoped,
 	}
 
         try {
-            srv = new Server(6379, new SocketServer());
+	    System.out.println("starting server on port " + port);
+            srv = new Server(port, new SocketServer());
             srv.run();
 
 	    System.out.println("saving data to " + tardisFile);
@@ -1561,12 +1632,12 @@ public class SocketServer implements IConnectionScoped,
 	    }
 
 	    if (DEBUG) {
-		System.out.println("     " + cmdname + " " + args);
+		System.out.println("     " + cmdname + " " + Arrays.toString(args));
 	    }
 
 	    Command cmd = commands.get(cmdname);
 	    if (cmd != null) {
-		if (cmd.stringArg) {
+		if (cmd.stringArg && ! data.startsWith("*")) {
 		    String arg = args[args.length-1];
 		    args[args.length-1] = parseString(nbc, arg);
 		}
@@ -1591,9 +1662,9 @@ public class SocketServer implements IConnectionScoped,
 	    }
 
 	    else if (password != null && !authenticated && !cmdname.equals("auth")) {
-System.out.println("password: " + password);
-System.out.println("authenticated: " + authenticated);
-System.out.println("cmdname: " + cmdname);
+//System.out.println("password: " + password);
+//System.out.println("authenticated: " + authenticated);
+//System.out.println("cmdname: " + cmdname);
 		printError(nbc, "operation not permitted");
 	    }
 
@@ -1700,7 +1771,7 @@ if (DEBUG) {
 	byte result[] = nbc.readBytesByLength((int)len);
 	String sResult = new String(result);
 	
-System.out.printf("received %d bytes '%s'\n", result.length, sResult);
+// if (DEBUG) System.out.printf("received %d bytes '%s'\n", result.length, sResult);
 	nbc.readBytesByLength(2);
 	return sResult;
     }
